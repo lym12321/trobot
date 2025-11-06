@@ -1,0 +1,9 @@
+[submodule "components/utils"]
+	path = components/utils
+	url = https://github.com/lym12321/tr_comp_utils.git
+[submodule "components/cmsis-dsp"]
+	path = components/cmsis-dsp
+	url = https://github.com/lym12321/tr_comp_cmsis_dsp.git
+[submodule "components/motor"]
+	path = components/motor
+	url = https://github.com/lym12321/tr_comp_motor.git
