@@ -240,7 +240,13 @@ SECTIONS
     . = ALIGN(8);
   } >DTCMRAM
 
-
+  .ram_d1 :
+  {
+    . = ALIGN(4);
+    *(ram_d1)
+    *(ram_d1*)
+    . = ALIGN(4);
+  } >RAM_D1 AT>FLASH
 
   /* Remove information from the standard libraries */
   /DISCARD/ :
