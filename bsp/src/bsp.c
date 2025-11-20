@@ -12,6 +12,10 @@
 #include "iwdg.h"
 #include "usb_device.h"
 
+void bsp_iwdg_refresh() {
+    HAL_IWDG_Refresh(&hiwdg1);
+}
+
 void bsp_assert_failed(const char *expr, const char *file, int line) {
     bsp_led_set(255, 0, 0);
     if (CoreDebug->DHCSR & CoreDebug_DHCSR_C_DEBUGEN_Msk)
@@ -19,8 +23,8 @@ void bsp_assert_failed(const char *expr, const char *file, int line) {
     else {
         vTaskSuspendAll();
         for (;;) {
-            HAL_IWDG_Refresh(&hiwdg1);
-            __NOP();
+            bsp_iwdg_refresh();
+            HAL_Delay(10);
         }
     }
 }

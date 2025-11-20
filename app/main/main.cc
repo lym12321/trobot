@@ -10,6 +10,7 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
     bsp_hw_init();
     for (;;) {
         bsp_led_set_hsv(static_cast<float>(bsp_time_get_ms() % 3000) / 3000.0f, 1.0f, 0.3f);
+        bsp_iwdg_refresh();
         bsp_time_delay(5);
     }
 }

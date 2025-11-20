@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 void bsp_hw_init();
+void bsp_iwdg_refresh();
 
 #ifdef __cplusplus
 }
