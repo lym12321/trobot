@@ -7,7 +7,7 @@
 #include "bsp/def.h"
 
 #define BSP_CAN_DEVICE_COUNT 3
-#define BSP_CAN_FILTER_LIMIT 16
+#define BSP_CAN_FILTER_LIMIT 8
 #define BSP_CAN_BUFFER_SIZE 64
 
 typedef enum {
