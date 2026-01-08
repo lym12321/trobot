@@ -6,7 +6,8 @@ cmake
 Core
 Drivers
 Middlewares
-./USB_DEVICE
+USB_DEVICE
+!bsp/usb_device
 CMakePresets.json
 startup_stm32h723xx.s
 SystemView.SVPrj
