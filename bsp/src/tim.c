@@ -21,7 +21,7 @@ void bsp_tim_set(TIM_HandleTypeDef *device, uint32_t period, uint32_t prescaler)
 }
 
 // usage: bsp_tim_config(&htim1, 1000);
-void bsp_tim_config(TIM_HandleTypeDef *device, double p) {
+void bsp_tim_config(TIM_HandleTypeDef *device, float p) {
     double t = 1e6 / p, period_limit = 0;
     if (device->Instance == TIM1 || device->Instance == TIM8 || device->Instance == TIM15 || device->Instance == TIM16 || device->Instance == TIM17) {
         t *= RCC_APB2_CLOCK_FREQ_MHZ;
@@ -38,8 +38,8 @@ void bsp_tim_config(TIM_HandleTypeDef *device, double p) {
 }
 
 // 0 <= blank <= 1
-// usage: bsp_tim_set_blank(&htim1, TIM_CHANNEL_1, 0.5);
-void bsp_tim_set_duty(TIM_HandleTypeDef *device, uint32_t channel, double duty) {
+// usage: bsp_tim_set_duty(&htim1, TIM_CHANNEL_1, 0.5);
+void bsp_tim_set_duty(TIM_HandleTypeDef *device, uint32_t channel, float duty) {
     BSP_ASSERT(0 <= duty && duty <= 1);
     __HAL_TIM_SetCompare(device, channel, (uint32_t)((device->Init.Period + 1) * duty));
 }

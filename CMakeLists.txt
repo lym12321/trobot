@@ -51,6 +51,8 @@ add_subdirectory(components)
 add_subdirectory(app)
 message(STATUS "APP Loaded")
 
+target_compile_options(app PUBLIC -Werror)
+
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
@@ -82,4 +84,16 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     components
     bsp
     m
+)
+
+
+add_custom_target(flash_verify
+    COMMAND openocd
+        -f ${CMAKE_CURRENT_LIST_DIR}/stlink.cfg
+        -c "init"
+        -c "reset halt"
+        -c "program $<TARGET_FILE:${CMAKE_PROJECT_NAME}> verify reset exit"
+    DEPENDS ${CMAKE_PROJECT_NAME}
+    COMMENT "Flashing and verifying the firmware via OpenOCD"
+    USES_TERMINAL
 )

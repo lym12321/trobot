@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "usart.h"
+#include "bsp/time.h"
 
 static bsp_uart_handle_t *handle[BSP_UART_DEVICE_COUNT] = {
     [E_UART_1] = &huart1,
@@ -92,6 +93,20 @@ void bsp_uart_set_callback(bsp_uart_e device, bsp_uart_callback_t func) {
 
     HAL_UARTEx_ReceiveToIdle_DMA(handle[device], rx_buffer[device], BSP_UART_BUFFER_SIZE);
     __HAL_DMA_DISABLE_IT(handle[device]->hdmarx, DMA_IT_HT);
+}
+
+void bsp_uart_set_baudrate(bsp_uart_e device, uint32_t baudrate) {
+    BSP_ASSERT(0 <= device && device < BSP_UART_DEVICE_COUNT && baudrate > 0);
+
+    HAL_UART_StateTypeDef state = HAL_UART_GetState(handle[device]);
+    while (state == HAL_UART_STATE_BUSY_TX || state == HAL_UART_STATE_BUSY_RX || state == HAL_UART_STATE_BUSY_TX_RX) {
+        state = HAL_UART_GetState(handle[device]);
+        bsp_time_delay(1);
+    }
+
+    HAL_UART_DeInit(handle[device]);
+    handle[device]->Init.BaudRate = baudrate;
+    HAL_UART_Init(handle[device]);
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *h, uint16_t len) {

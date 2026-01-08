@@ -3,14 +3,17 @@
 //
 
 #include "bsp/bsp.h"
+
+#include "../include/bsp/flash.h"
 #include "bsp/can.h"
 #include "bsp/def.h"
 #include "bsp/imu.h"
 #include "bsp/led.h"
+#include "bsp/buzzer.h"
 
 #include "task.h"
 #include "iwdg.h"
-#include "usb_device.h"
+#include "bsp/usb.h"
 
 void bsp_iwdg_refresh() {
     HAL_IWDG_Refresh(&hiwdg1);
@@ -30,9 +33,11 @@ void bsp_assert_failed(const char *expr, const char *file, int line) {
 }
 
 void bsp_hw_init() {
-    MX_USB_DEVICE_Init();
+    bsp_usb_init();
     bsp_can_init(E_CAN_1);
     bsp_can_init(E_CAN_2);
     bsp_can_init(E_CAN_3);
     bsp_imu_init();
+    bsp_flash_init();
+    bsp_buzzer_init();
 }

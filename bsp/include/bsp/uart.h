@@ -35,6 +35,8 @@ void bsp_uart_printf_async(bsp_uart_e device, const char *fmt, ...);
 
 void bsp_uart_set_callback(bsp_uart_e device, bsp_uart_callback_t func);
 
+void bsp_uart_set_baudrate(bsp_uart_e device, uint32_t baudrate);
+
 #ifdef __cplusplus
 }
 #endif
