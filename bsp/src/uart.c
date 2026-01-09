@@ -142,3 +142,15 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *h) {
         }
     }
 }
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *h) {
+    for (int i = 0; i < BSP_UART_DEVICE_COUNT; i++) {
+        if (handle[i] == h) {
+            ds_rq_init(&rq[i], rq_buffer[i], BSP_UART_BUFFER_SIZE);
+            busy[i] = 0;
+            HAL_UARTEx_ReceiveToIdle_DMA(h, rx_buffer[i], BSP_UART_BUFFER_SIZE);
+            __HAL_DMA_DISABLE_IT(h->hdmarx, DMA_IT_HT);
+            break;
+        }
+    }
+}

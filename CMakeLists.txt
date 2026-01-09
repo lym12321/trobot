@@ -87,7 +87,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 )
 
 
-add_custom_target(flash_verify
+add_custom_target(flash_and_verify
     COMMAND openocd
         -f ${CMAKE_CURRENT_LIST_DIR}/stlink.cfg
         -c "init"
