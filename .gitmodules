@@ -7,3 +7,6 @@
 [submodule "components/motor"]
 	path = components/motor
 	url = https://github.com/lym12321/tr_comp_motor.git
+[submodule "components/rc"]
+	path = components/rc
+	url = https://github.com/lym12321/tr_comp_rc.git
