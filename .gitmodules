@@ -13,3 +13,6 @@
 [submodule "components/controller"]
 	path = components/controller
 	url = https://github.com/lym12321/tr_comp_controller.git
+[submodule "components/math"]
+	path = components/math
+	url = https://github.com/lym12321/tr_comp_math.git
