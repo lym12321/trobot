@@ -10,3 +10,6 @@
 [submodule "components/rc"]
 	path = components/rc
 	url = https://github.com/lym12321/tr_comp_rc.git
+[submodule "components/controller"]
+	path = components/controller
+	url = https://github.com/lym12321/tr_comp_controller.git
