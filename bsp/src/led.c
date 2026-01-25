@@ -3,22 +3,26 @@
 //
 
 #include "bsp/led.h"
-#include "bsp/spi.h"
 
 #include "math.h"
+#include "tim.h"
 
-#define WS2812_HIGH 0xf0
-#define WS2812_LOW  0xc0
+#define WS2812_HIGH 168
+#define WS2812_LOW  84
 
-static uint8_t buf[24];
+static uint16_t buf[24+48];
+
+void bsp_led_init() {
+    for (uint8_t i = 0; i < 24+48; i++) buf[i] = 0;
+    HAL_TIMEx_PWMN_Start_DMA(&htim8, TIM_CHANNEL_1, (uint32_t *) buf, 24+48);
+}
 
 void bsp_led_set(uint8_t r, uint8_t g, uint8_t b) {
     for (uint8_t i = 0; i < 8; i++) {
-        buf[7 - i]  = (((g >> i) & 1) ? WS2812_HIGH : WS2812_LOW) >> 1;
-        buf[15 - i] = (((r >> i) & 1) ? WS2812_HIGH : WS2812_LOW) >> 1;
-        buf[23 - i] = (((b >> i) & 1) ? WS2812_HIGH : WS2812_LOW) >> 1;
+        buf[7 - i]  = ((g >> i) & 1) ? WS2812_HIGH : WS2812_LOW;
+        buf[15 - i] = ((r >> i) & 1) ? WS2812_HIGH : WS2812_LOW;
+        buf[23 - i] = ((b >> i) & 1) ? WS2812_HIGH : WS2812_LOW;
     }
-    bsp_spi_send(&hspi6, buf, 24);
 }
 
 void bsp_led_set_hsv(float h, float s, float v) {

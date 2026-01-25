@@ -34,6 +34,7 @@ void bsp_assert_failed(const char *expr, const char *file, int line) {
 }
 
 void bsp_hw_init() {
+    bsp_led_init();
     bsp_usb_init();
     bsp_can_init(E_CAN_1);
     bsp_can_init(E_CAN_2);
