@@ -14,6 +14,7 @@
 #include "task.h"
 #include "iwdg.h"
 #include "bsp/usb.h"
+#include "bsp/adc.h"
 
 void bsp_iwdg_refresh() {
     HAL_IWDG_Refresh(&hiwdg1);
@@ -38,6 +39,7 @@ void bsp_hw_init() {
     bsp_can_init(E_CAN_2);
     bsp_can_init(E_CAN_3);
     bsp_imu_init();
+    bsp_adc_init();
     bsp_flash_init();
     bsp_buzzer_init();
 }
