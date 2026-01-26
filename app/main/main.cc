@@ -7,7 +7,9 @@
 #include "bsp/time.h"
 
 #include "bsp/buzzer.h"
+#include "ins/ins.h"
 #include "rc/dr16.h"
+#include "rc/ht10.h"
 #include "utils/os.h"
 
 extern void example_task(void *args);
@@ -23,7 +25,11 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
 
     // logger::init(E_UART_1, logger::INFO);
     // terminal::init(E_UART_1, 921600);
-    rc::dr16::init(E_UART_5);
+    // rc::dr16::init(E_UART_5);
+    // rc::ht10::init(E_UART_5);
+
+    ins::init();
+    while (!ins::inited) os::task::sleep(5), bsp_iwdg_refresh();
 
     bsp_buzzer_flash(4500, 0.2f, 75);
     bsp_time_delay(50);
