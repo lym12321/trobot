@@ -16,3 +16,6 @@
 [submodule "components/math"]
 	path = components/math
 	url = https://github.com/lym12321/tr_comp_math.git
+[submodule "components/ins"]
+	path = components/ins
+	url = https://github.com/lym12321/tr_comp_ins.git
