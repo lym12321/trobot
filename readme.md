@@ -15,5 +15,5 @@ git clone https://github.com/lym12321/trobot.git --recursive
 #### RoboMaster 裁判系统通信
 <https://github.com/lym12321/tr_comp_robomaster>
 ```shell
-git submodule add https://github.com/lym12321/tr_comp_robomaster.git components/robomaster
+git submodule add -f https://github.com/lym12321/tr_comp_robomaster.git components/robomaster
 ```
