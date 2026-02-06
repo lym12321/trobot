@@ -14,14 +14,13 @@ static bsp_can_handle_t *handle[BSP_CAN_DEVICE_COUNT] = {
     [E_CAN_3] = &hfdcan3
 };
 
-static uint8_t cnt[BSP_CAN_DEVICE_COUNT][2];
-static uint32_t pkg_id[BSP_CAN_DEVICE_COUNT][2][BSP_CAN_FILTER_LIMIT];
-static bsp_can_callback_t callback[BSP_CAN_DEVICE_COUNT][2][BSP_CAN_FILTER_LIMIT];
+static uint8_t cnt[BSP_CAN_DEVICE_COUNT];
+static uint32_t pkg_id[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
+static bsp_can_callback_t callback[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 
-_ram_d1 static uint8_t rx_buffer[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT][BSP_CAN_BUFFER_SIZE];
+_ram_d1 static uint8_t rx_buffer[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD][BSP_CAN_BUFFER_SIZE];
 
 void bsp_can_init(bsp_can_e device) {
-    // HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_TX_FIFO_EMPTY, 0);
     HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
     HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0);
     HAL_FDCAN_ConfigGlobalFilter(handle[device], FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
@@ -29,23 +28,25 @@ void bsp_can_init(bsp_can_e device) {
 }
 
 void bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callback_t func) {
-    const uint8_t is_ext = id > 0x7ff;
-    BSP_ASSERT(cnt[device][is_ext] < BSP_CAN_FILTER_LIMIT && func != NULL);
-    pkg_id[device][is_ext][cnt[device][is_ext]] = id;
-    callback[device][is_ext][cnt[device][is_ext]] = func;
+    BSP_ASSERT(cnt[device] < BSP_CAN_FILTER_LIMIT_STD && func != NULL && id <= 0x7ff);
+    pkg_id[device][cnt[device]] = id;
+    callback[device][cnt[device]] = func;
+
+    // 确保同一 CAN 总线上注册的 id 不重复
+    for (int i = 0; i < cnt[device]; i++) BSP_ASSERT(pkg_id[device][i] != id);
 
     FDCAN_FilterTypeDef filter = {
-        .IdType = id > 0x7ff ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID,
-        .FilterIndex = cnt[device][is_ext],
+        .IdType = FDCAN_STANDARD_ID,
+        .FilterIndex = cnt[device],
         .FilterType = FDCAN_FILTER_MASK,
         .FilterID1 = id,
-        .FilterID2 = id > 0x7ff ? 0x1fffffff : 0x7ff,
-        .FilterConfig = (id & 1) ? FDCAN_FILTER_TO_RXFIFO0 : FDCAN_FILTER_TO_RXFIFO1,
+        .FilterID2 = 0x7ff,
+        .FilterConfig = FDCAN_FILTER_TO_RXFIFO0,
     };
 
     BSP_ASSERT(HAL_FDCAN_ConfigFilter(handle[device], &filter) == HAL_OK);
 
-    cnt[device][is_ext] ++;
+    cnt[device] ++;
 }
 
 static uint32_t len2code(uint8_t l) {
@@ -61,12 +62,12 @@ static uint32_t len2code(uint8_t l) {
 }
 
 // len <= 8 时使用标准 can，len > 8 时使用 fdcan
-// 同一 can 总线上不可同时出现标准 can 和 fdcan 两种数据包
+// **若使用 fdcan，总线上不能有只支持标准 can 的节点
 void bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, uint8_t len) {
-    BSP_ASSERT(data != NULL && len > 0 && len <= 64);
+    BSP_ASSERT(data != NULL && len > 0 && len <= 64 && id <= 0x7ff);
     FDCAN_TxHeaderTypeDef header = {
         .Identifier = id,
-        .IdType = id > 0x7ff ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID,
+        .IdType = FDCAN_STANDARD_ID,
         .TxFrameType = FDCAN_DATA_FRAME,
         .DataLength = len2code(len),
         .ErrorStateIndicator = FDCAN_ESI_ACTIVE,
@@ -92,15 +93,14 @@ static uint8_t code2len(uint32_t l) {
 
 void bsp_can_callback_sol(bsp_can_e device, uint32_t fifo) {
     FDCAN_RxHeaderTypeDef header;
-    uint8_t buf[BSP_CAN_BUFFER_SIZE] = { 0 };
+    static uint8_t buf[BSP_CAN_BUFFER_SIZE] = { 0 };
     while (HAL_FDCAN_GetRxFifoFillLevel(handle[device], fifo)) {
         if (HAL_FDCAN_GetRxMessage(handle[device], fifo, &header, buf) != HAL_OK) break;
-        uint8_t is_ext = header.IdType == FDCAN_EXTENDED_ID;
-        for (uint8_t i = 0; i < cnt[device][is_ext]; i++) {
-            if (pkg_id[device][is_ext][i] == header.Identifier) {
+        for (uint8_t i = 0; i < cnt[device]; i++) {
+            if (pkg_id[device][i] == header.Identifier) {
                 uint8_t len = code2len(header.DataLength);
                 memcpy(rx_buffer[device][i], buf, len);
-                if (callback[device][is_ext][i] != NULL) callback[device][is_ext][i](device, header.Identifier, rx_buffer[device][i], len);
+                if (callback[device][i] != NULL) callback[device][i](device, header.Identifier, rx_buffer[device][i], len);
                 break;
             }
         }
@@ -112,16 +112,6 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *device, uint32_t RxFifo0ITs)
     for(uint8_t i = 0; i < BSP_CAN_DEVICE_COUNT; i++) {
         if(handle[i] == device) {
             bsp_can_callback_sol(i, FDCAN_RX_FIFO0);
-            break;
-        }
-    }
-}
-
-void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *device, uint32_t RxFifo1ITs) {
-    UNUSED(RxFifo1ITs);
-    for(uint8_t i = 0; i < BSP_CAN_DEVICE_COUNT; i++) {
-        if(handle[i] == device) {
-            bsp_can_callback_sol(i, FDCAN_RX_FIFO1);
             break;
         }
     }

@@ -8,7 +8,6 @@
 
 #define BSP_UART_DEVICE_COUNT 6
 #define BSP_UART_BUFFER_SIZE 512
-#define BSP_UART_QUEUE_SEG_LIMIT 20
 
 typedef enum {
     E_UART_1,
