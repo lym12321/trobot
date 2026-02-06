@@ -109,10 +109,13 @@ void bsp_can_callback_sol(bsp_can_e device, uint32_t fifo) {
 
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *device, uint32_t RxFifo0ITs) {
     UNUSED(RxFifo0ITs);
-    for(uint8_t i = 0; i < BSP_CAN_DEVICE_COUNT; i++) {
-        if(handle[i] == device) {
-            bsp_can_callback_sol(i, FDCAN_RX_FIFO0);
-            break;
-        }
+    switch((uint32_t) device->Instance) {
+    case (uint32_t) FDCAN1:
+        bsp_can_callback_sol(E_CAN_1, FDCAN_RX_FIFO0); break;
+    case (uint32_t) FDCAN2:
+        bsp_can_callback_sol(E_CAN_2, FDCAN_RX_FIFO0); break;
+    case (uint32_t) FDCAN3:
+        bsp_can_callback_sol(E_CAN_3, FDCAN_RX_FIFO0); break;
+    default: break;
     }
 }
