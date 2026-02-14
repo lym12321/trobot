@@ -7,10 +7,9 @@
 
 #include <string.h>
 
-void ds_rq_init(ds_rq_t *q, uint8_t *buf, const size_t sz) {
+void ds_rq_init(ds_rq_t *q, uint8_t *buf, const int sz) {
     q->buf = buf;
     q->sz = sz, q->l = 0, q->r = 0;
-    memset(buf, 0, sz * sizeof(uint8_t));
 }
 
 int ds_rq_size(ds_rq_t *q) {
@@ -36,7 +35,6 @@ uint8_t ds_rq_pop(ds_rq_t *q, uint8_t *res, const size_t len) {
     if (len > cs) return 0;
     for (size_t i = 0; i < len; i++) {
         res[i] = q->buf[q->l];
-        q->buf[q->l] = '_';
         q->l = (q->l + 1) % q->sz;
     }
     return 1;

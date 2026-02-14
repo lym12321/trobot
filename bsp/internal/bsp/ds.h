@@ -15,7 +15,7 @@ typedef struct {
     int sz, l, r;
 } ds_rq_t;
 
-void ds_rq_init(ds_rq_t *q, uint8_t *buf, size_t sz);
+void ds_rq_init(ds_rq_t *q, uint8_t *buf, int sz);
 int ds_rq_avail(ds_rq_t *q);
 int ds_rq_size(ds_rq_t *q);
 uint8_t ds_rq_push(ds_rq_t *q, const uint8_t *data, size_t len);
