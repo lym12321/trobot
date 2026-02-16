@@ -51,3 +51,9 @@ void bsp_tim_pwm_enable(TIM_HandleTypeDef *device, uint32_t channel) {
 void bsp_tim_pwm_disable(TIM_HandleTypeDef *device, uint32_t channel) {
     HAL_TIM_PWM_Stop(device, channel);
 }
+
+void bsp_tim_set_callback(TIM_HandleTypeDef *device, void (*callback)(TIM_HandleTypeDef *htim)) {
+    HAL_TIM_Base_Stop_IT(device);
+    HAL_TIM_RegisterCallback(device, HAL_TIM_PERIOD_ELAPSED_CB_ID, callback);
+    HAL_TIM_Base_Start_IT(device);
+}
