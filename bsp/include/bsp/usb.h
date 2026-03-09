@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 void bsp_usb_init();
-void bsp_usb_cdc_send(uint8_t *data, uint16_t len);
+void bsp_usb_cdc_send(const uint8_t *data, uint16_t len);
 void bsp_usb_cdc_printf(const char *fmt, ...);
 
 #ifdef __cplusplus

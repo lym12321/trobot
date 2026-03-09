@@ -17,11 +17,8 @@ void bsp_usb_init() {
     MX_USB_DEVICE_Init();
 }
 
-void bsp_usb_cdc_send(uint8_t *data, uint16_t len) {
-    uint8_t ret;
-    do {
-        ret = CDC_Transmit_HS(data, len);
-    } while (ret == USBD_BUSY);
+void bsp_usb_cdc_send(const uint8_t *data, uint16_t len) {
+    CDC_Transmit_HS(data, len);
 }
 
 void bsp_usb_cdc_send_async(uint8_t *data, uint16_t len) {
