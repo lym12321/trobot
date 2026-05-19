@@ -45,13 +45,13 @@ git submodule add -f https://github.com/lym12321/tr_comp_robomaster.git componen
 配置OpenOCD烧录工具，编译并烧录代码。
 1. 在CLion的右上角点开你的项目配置界面添加OpenOCD的配置
 
-   <img src="pic/Openocd_1.png" width="400">
+   <img src="pic/OpenOcd_1.png" width="400">
 
-   <img src="pic/Openocd_2.png" width="400">
+   <img src="pic/OpenOcd_2.png" width="400">
 
 2. 在OpenOCD配置界面选择trobot和你使用的烧录器```.cfg```文件
 
-   <img src="pic/Openocd_3.png" width="400">
+   <img src="pic/OpenOcd_3.png" width="400">
 
 
 
