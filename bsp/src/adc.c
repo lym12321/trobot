@@ -4,6 +4,7 @@
 
 #include "bsp/adc.h"
 #include "adc.h"
+#include "bsp/def.h"
 #include <stdint.h>
 
 static uint16_t val[2];

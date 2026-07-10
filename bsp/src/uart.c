@@ -104,7 +104,7 @@ void bsp_uart_set_callback(bsp_uart_e device, bsp_uart_callback_t func) {
 
     callback[device] = func;
 
-    HAL_UARTEx_ReceiveToIdle_DMA(handle[device], rx_buffer[device], BSP_UART_BUFFER_SIZE);
+    BSP_ASSERT(HAL_UARTEx_ReceiveToIdle_DMA(handle[device], rx_buffer[device], BSP_UART_BUFFER_SIZE) == HAL_OK);
     __HAL_DMA_DISABLE_IT(handle[device]->hdmarx, DMA_IT_HT);
 }
 
@@ -118,9 +118,9 @@ void bsp_uart_set_baudrate(bsp_uart_e device, uint32_t baudrate) {
         bsp_time_delay(1);
     }
 
-    HAL_UART_DeInit(handle[device]);
+    BSP_ASSERT(HAL_UART_DeInit(handle[device]) == HAL_OK);
     handle[device]->Init.BaudRate = baudrate;
-    HAL_UART_Init(handle[device]);
+    BSP_ASSERT(HAL_UART_Init(handle[device]) == HAL_OK);
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *h, uint16_t len) {

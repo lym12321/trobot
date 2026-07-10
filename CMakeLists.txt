@@ -51,7 +51,7 @@ add_subdirectory(components)
 add_subdirectory(app)
 message(STATUS "APP Loaded")
 
-target_compile_options(app PUBLIC -Werror)
+target_compile_options(app PRIVATE -Werror)
 
 # Link directories setup
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE

@@ -1,77 +1,41 @@
-# TRobot Agent Guide
+# Repository Guidelines
 
-This file records project-specific maintenance rules for AI coding agents.
-Read it before editing code in this repository.
+## Project Structure & Module Organization
 
-## Project Context
+TRobot is an STM32H723 firmware framework built with CMake, FreeRTOS, STM32 HAL, and C++ components. CubeMX-generated code stays in `Core/`, `Drivers/`, `Middlewares/`, `USB_DEVICE/`, and `cmake/stm32cubemx/`. The generated FreeRTOS `entrance` thread calls C++ `app_entrance()` in `app/main/main.cc`; keep application task orchestration and robot behavior under `app/`.
 
-- This is an STM32H723 embedded robot framework built with CMake.
-- The project uses FreeRTOS. Prefer clear task, queue, semaphore, timer, and event-group based designs when they simplify concurrency.
-- MCU resources are relatively abundant. Do not optimize aggressively for code size unless a concrete limit is involved.
-- Favor concise, readable, maintainable code over dense micro-optimizations.
+Hardware ownership belongs in `bsp/`: public C headers are in `bsp/include/bsp/`, implementations in `bsp/src/`, private helpers in `bsp/internal/`, and bundled ports such as SEGGER, EasyFlash, USB, and W25Q64 remain in their existing folders. Reusable modules live in `components/<name>/` with `include/<name>/`, `src/`, optional `internal/`, and a `CMakeLists.txt` exporting `components::<name>`.
 
-## Coding Style
+## Build, Test, and Development Commands
 
-- Use `snake_case` for identifiers whenever possible.
-- Exceptions:
-  - Preprocessor macros may keep `UPPER_SNAKE_CASE`.
-  - Enum constants may keep the existing enum style.
-  - Third-party, STM32 HAL, CubeMX, FreeRTOS, SEGGER, or component API names should not be renamed just for style.
-- Keep names descriptive but not verbose.
-- Prefer small, direct functions with clear ownership over clever abstractions.
-- Add comments only when they explain non-obvious hardware behavior, timing constraints, concurrency contracts, or protocol details.
+- `git clone --recursive <repo>`: clone required component submodules.
+- `cmake --preset Debug`: configure the Ninja Debug build with `cmake/gcc-arm-none-eabi.cmake`.
+- `cmake --build --preset Debug`: build firmware; `app` uses `-Werror`.
+- `cmake --build --preset Release`: build the optimized preset.
+- `cmake --build --preset Debug --target flash_and_verify`: flash and verify through OpenOCD using `stlink.cfg`.
 
-## RTOS Guidelines
+Use CLion CMake preset profiles. After CubeMX regeneration, check whether `STM32H723XG_FLASH.ld` was overwritten.
 
-- Use RTOS primitives deliberately instead of ad hoc polling when coordination is needed.
-- Prefer blocking waits with timeouts over busy loops.
-- Keep ISR code short. Defer work to tasks using queues, notifications, semaphores, or other RTOS-safe mechanisms.
-- Make task responsibilities explicit. Avoid sharing mutable state across tasks unless ownership and synchronization are clear.
-- When adding a task, document its purpose, wake-up source, and priority rationale near the task setup if the relationship is not obvious.
+## Codex Execution Policy
 
-## Embedded Design Preferences
+For Codex sessions in this repository, do static inspection only. Do not run firmware builds, `make`, CMake/Ninja build commands, OpenOCD, flash, or verify targets. Build and hardware verification are handled by other models or by humans.
 
-- Clarity is more important than minimizing every byte.
-- Avoid hidden global coupling. If a module owns hardware state, expose a narrow API around that ownership.
-- Treat hardware timing, DMA buffers, interrupt callbacks, and cache coherency as high-risk areas. Review these changes carefully.
-- Prefer typed configuration and local constants over scattered magic numbers.
-- Preserve generated-code boundaries. Keep user logic in application, BSP, or component areas rather than editing CubeMX generated sections unnecessarily.
+## Coding Style & Naming Conventions
 
-## Repository Layout
+Use C17 for BSP/generated C and C++23 for application/components. Keep four-space indentation, concise functions, and descriptive `snake_case` names. BSP APIs use `bsp_*` and C enums such as `E_CAN_1` or `E_UART_1`; keep HAL, FreeRTOS, SEGGER, CubeMX, and third-party names unchanged. Components use namespaces such as `os`, `motor`, `rc::dr16`, `ins`, and `robot::chassis`, with small classes or structs for typed configuration.
 
-- `app/`: application entry points and RTOS task code.
-- `bsp/`: board support package and hardware-facing drivers.
-- `components/`: reusable components and optional submodules.
-- `Core/`, `Drivers/`, `Middlewares/`, `USB_DEVICE/`, `cmake/stm32cubemx/`: STM32CubeMX, HAL, middleware, and generated integration areas.
-- `assets/`: documentation images and other non-firmware assets.
+Prefer typed constants, `static constexpr`, local `static` helpers, and `BSP_ASSERT` for invariants. Comments should explain hardware timing, units, protocol layouts, calibration, concurrency, or DMA/cache constraints.
 
-## Build And Verification
+## RTOS & Embedded Design Guidelines
 
-- The project is built through CMake presets, commonly from CLion.
-- `app` is compiled with `-Werror`; keep warnings clean.
-- When changing firmware code, prefer at least a local build check when toolchains are available.
-- For hardware-dependent behavior, state what was verified locally and what still needs board testing.
-- Flashing is available through the `flash_and_verify` CMake target with OpenOCD configuration in `stlink.cfg`.
+Initialize board hardware through `bsp_hw_init()` before starting application tasks. Create tasks from `app_entrance()` using `os::task::static_create()` or FreeRTOS APIs, and keep watchdog refresh paths explicit. Use `os::task::sleep()` or `vTaskDelayUntil()` for periodic work; reserve busy microsecond waits for short hardware timing.
 
-## CubeMX Notes
+Keep ISRs and HAL callbacks short. Defer work through callbacks, queues, notifications, or component state updates. Protect shared ISR/task state with `bsp/sys.h` critical-section helpers. DMA-visible buffers may need `_ram_d1`; review lifetime and cache behavior before changing UART, CAN, SPI, USB, IMU, or flash paths.
 
-- The `.ioc` file is the source for STM32CubeMX regeneration.
-- FreeRTOS and MCU peripheral/clock/NVIC/DMA configuration changes should be made through the `.ioc` file when they are configuration-level changes.
-- Edit the `.ioc` file directly only when the intended CubeMX setting and its generated-code effect are fully understood. If there is any uncertainty, stop and ask the user to make or confirm the CubeMX change.
-- CubeMX may overwrite generated files. Keep custom logic out of generated regions unless the file explicitly supports user sections.
-- After CubeMX regeneration, check linker script changes carefully. The project README notes that the `.ld` file may need to be restored.
+## CubeMX, Testing, and PRs
 
-## Git And Submodules
+Treat `trobot.ioc` as the source for peripheral, clock, DMA, NVIC, and FreeRTOS configuration. Keep custom logic out of generated files unless inside user sections. BSP drivers should expose narrow C wrappers and hide HAL handles, buffers, filters, and callbacks in `bsp/src/`.
 
-- `components/` may contain Git submodules. Do not reset, clean, or rewrite submodule state unless explicitly requested.
-- If the worktree already has unrelated changes, leave them intact and scope edits to the requested task.
-- When adding optional components, use documented submodule commands from `readme.md` unless the user requests another source.
+No standalone automated test harness is present. For firmware changes, run a clean CMake build and document board verification: flash result, OpenOCD verify status, terminal output, sensor data, CAN/UART traffic, or motor response.
 
-## Agent Operating Rules
-
-- Before editing, inspect the nearby code and follow existing local patterns.
-- Keep changes narrowly scoped to the request.
-- Do not rename public APIs or move module boundaries unless that is part of the requested change.
-- Prefer `rg` for searching.
-- Do not guess when project behavior, hardware configuration, CubeMX settings, or user intent is uncertain. Stop and ask the user immediately.
-- Maintain this file when project conventions change, especially style, RTOS usage, build, or verification rules.
+History uses `feat:`, `fix:`, `chore:`, and `doc:` prefixes, sometimes with scopes like `feat (ins):`. PRs should include a summary, affected modules, build results, hardware verification status, and linked issues when applicable.

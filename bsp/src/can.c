@@ -17,18 +17,20 @@ static bsp_can_handle_t *handle[BSP_CAN_DEVICE_COUNT] = {
 static uint8_t cnt[BSP_CAN_DEVICE_COUNT];
 static uint32_t pkg_id[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 static bsp_can_callback_t callback[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
+static volatile uint32_t send_error_count[BSP_CAN_DEVICE_COUNT];
 
 _ram_d1 static uint8_t rx_buffer[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD][BSP_CAN_BUFFER_SIZE];
 
 void bsp_can_init(bsp_can_e device) {
-    HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
-    HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0);
-    HAL_FDCAN_ConfigGlobalFilter(handle[device], FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
-    HAL_FDCAN_Start(handle[device]);
+    BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT);
+    BSP_ASSERT(HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) == HAL_OK);
+    BSP_ASSERT(HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) == HAL_OK);
+    BSP_ASSERT(HAL_FDCAN_ConfigGlobalFilter(handle[device], FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE) == HAL_OK);
+    BSP_ASSERT(HAL_FDCAN_Start(handle[device]) == HAL_OK);
 }
 
 void bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callback_t func) {
-    BSP_ASSERT(cnt[device] < BSP_CAN_FILTER_LIMIT_STD && func != NULL && id <= 0x7ff);
+    BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT && cnt[device] < BSP_CAN_FILTER_LIMIT_STD && func != NULL && id <= 0x7ff);
     pkg_id[device][cnt[device]] = id;
     callback[device][cnt[device]] = func;
 
@@ -64,7 +66,7 @@ static uint32_t len2code(uint8_t l) {
 // len <= 8 时使用标准 can，len > 8 时使用 fdcan
 // **若使用 fdcan，总线上不能有只支持标准 can 的节点
 void bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, uint8_t len) {
-    BSP_ASSERT(data != NULL && len > 0 && len <= 64 && id <= 0x7ff);
+    BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT && data != NULL && len > 0 && len <= 64 && id <= 0x7ff);
     FDCAN_TxHeaderTypeDef header = {
         .Identifier = id,
         .IdType = FDCAN_STANDARD_ID,
@@ -76,7 +78,9 @@ void bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, uint8_t le
         .TxEventFifoControl = FDCAN_STORE_TX_EVENTS,
         .MessageMarker = 0x01
     };
-    HAL_FDCAN_AddMessageToTxFifoQ(handle[device], &header, data);
+    if (HAL_FDCAN_AddMessageToTxFifoQ(handle[device], &header, data) != HAL_OK) {
+        send_error_count[device] ++;
+    }
 }
 
 static uint8_t code2len(uint32_t l) {
