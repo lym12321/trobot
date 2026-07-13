@@ -7,6 +7,6 @@
 #include <bsp/def.h>
 #include <spi.h>
 
-void bsp_spi_send(SPI_HandleTypeDef *device, const uint8_t *data, uint16_t len);
-void bsp_spi_recv(SPI_HandleTypeDef *device, uint8_t *data, uint16_t len);
-void bsp_spi_send_recv(SPI_HandleTypeDef *device, const uint8_t *data, uint8_t *recv, uint16_t len);
+bsp_status_t bsp_spi_send(SPI_HandleTypeDef *device, const uint8_t *data, uint16_t len);
+bsp_status_t bsp_spi_recv(SPI_HandleTypeDef *device, uint8_t *data, uint16_t len);
+bsp_status_t bsp_spi_send_recv(SPI_HandleTypeDef *device, const uint8_t *data, uint8_t *recv, uint16_t len);

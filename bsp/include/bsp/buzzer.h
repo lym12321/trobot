@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "bsp/def.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,19 +14,19 @@ extern "C" {
 /**
  * 初始化板载蜂鸣器
  */
-void bsp_buzzer_init();
+bsp_status_t bsp_buzzer_init();
 
 /**
  * 使蜂鸣器发出指定频率和占空比的声音
  * @param freq 频率 (Hz)
  * @param blank 占空比 (0 <= blank <= 1)
  */
-void bsp_buzzer_alarm(float freq, float blank);
+bsp_status_t bsp_buzzer_alarm(float freq, float blank);
 
 /**
  * 关闭蜂鸣器
  */
-void bsp_buzzer_quiet();
+bsp_status_t bsp_buzzer_quiet();
 
 /**
  * 阻塞式地使蜂鸣器以指定频率和占空比发声持续一段时间
@@ -33,7 +34,7 @@ void bsp_buzzer_quiet();
  * @param blank 占空比
  * @param duration 持续时间 (ms)
  */
-void bsp_buzzer_flash(float freq, float blank, uint32_t duration);
+bsp_status_t bsp_buzzer_flash(float freq, float blank, uint32_t duration);
 
 #ifdef __cplusplus
 }

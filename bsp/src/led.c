@@ -12,9 +12,9 @@
 
 static uint16_t buf[24+48];
 
-void bsp_led_init() {
+bsp_status_t bsp_led_init() {
     for (uint8_t i = 0; i < 24+48; i++) buf[i] = 0;
-    HAL_TIMEx_PWMN_Start_DMA(&htim8, TIM_CHANNEL_1, (uint32_t *) buf, 24+48);
+    return bsp_status_from_hal(HAL_TIMEx_PWMN_Start_DMA(&htim8, TIM_CHANNEL_1, (uint32_t *) buf, 24+48));
 }
 
 void bsp_led_set(uint8_t r, uint8_t g, uint8_t b) {
@@ -26,6 +26,10 @@ void bsp_led_set(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 void bsp_led_set_hsv(float h, float s, float v) {
+    if (!isfinite(h) || !isfinite(s) || !isfinite(v)) return;
+    h = fmodf(fmodf(h, 1.0f) + 1.0f, 1.0f);
+    s = s < 0 ? 0 : s > 1 ? 1 : s;
+    v = v < 0 ? 0 : v > 1 ? 1 : v;
     h = fmodf(h, 1.0f) * 6.0f;
 
     float f = h - floorf(h), p = v * (1 - s), q = v * (1 - s * f), t = v * (1 - s * (1 - f));

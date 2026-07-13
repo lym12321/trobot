@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "fdcan.h"
+#include "bsp/sys.h"
 
 static bsp_can_handle_t *handle[BSP_CAN_DEVICE_COUNT] = {
     [E_CAN_1] = &hfdcan1,
@@ -17,19 +18,25 @@ static bsp_can_handle_t *handle[BSP_CAN_DEVICE_COUNT] = {
 static uint8_t cnt[BSP_CAN_DEVICE_COUNT];
 static uint32_t pkg_id[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 static bsp_can_callback_t callback[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
-static volatile uint32_t send_error_count[BSP_CAN_DEVICE_COUNT];
+static volatile bsp_can_stats_t stats[BSP_CAN_DEVICE_COUNT];
 
 _ram_d1 static uint8_t rx_buffer[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD][BSP_CAN_BUFFER_SIZE];
 
-void bsp_can_init(bsp_can_e device) {
+bsp_status_t bsp_can_init(bsp_can_e device) {
     BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT);
-    BSP_ASSERT(HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0) == HAL_OK);
-    BSP_ASSERT(HAL_FDCAN_ActivateNotification(handle[device], FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) == HAL_OK);
-    BSP_ASSERT(HAL_FDCAN_ConfigGlobalFilter(handle[device], FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE) == HAL_OK);
-    BSP_ASSERT(HAL_FDCAN_Start(handle[device]) == HAL_OK);
+    HAL_StatusTypeDef hal = HAL_FDCAN_ActivateNotification(
+        handle[device],
+        FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_BUS_OFF,
+        0
+    );
+    if (hal == HAL_OK) hal = HAL_FDCAN_ConfigGlobalFilter(handle[device], FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
+    if (hal == HAL_OK) hal = HAL_FDCAN_Start(handle[device]);
+    const bsp_status_t status = bsp_status_from_hal(hal);
+    stats[device].last_status = status;
+    return status;
 }
 
-void bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callback_t func) {
+bsp_status_t bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callback_t func) {
     BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT && cnt[device] < BSP_CAN_FILTER_LIMIT_STD && func != NULL && id <= 0x7ff);
     pkg_id[device][cnt[device]] = id;
     callback[device][cnt[device]] = func;
@@ -46,9 +53,12 @@ void bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callback_t func
         .FilterConfig = FDCAN_FILTER_TO_RXFIFO0,
     };
 
-    BSP_ASSERT(HAL_FDCAN_ConfigFilter(handle[device], &filter) == HAL_OK);
+    const bsp_status_t status = bsp_status_from_hal(HAL_FDCAN_ConfigFilter(handle[device], &filter));
+    stats[device].last_status = status;
+    if (status != BSP_STATUS_OK) return status;
 
     cnt[device] ++;
+    return BSP_STATUS_OK;
 }
 
 static uint32_t len2code(uint8_t l) {
@@ -60,27 +70,35 @@ static uint32_t len2code(uint8_t l) {
     if(l == 32) return FDCAN_DLC_BYTES_32;
     if(l == 48) return FDCAN_DLC_BYTES_48;
     if(l == 64) return FDCAN_DLC_BYTES_64;
-    BSP_ASSERT(0); return 0;
+    return UINT32_MAX;
 }
 
 // len <= 8 时使用标准 can，len > 8 时使用 fdcan
 // **若使用 fdcan，总线上不能有只支持标准 can 的节点
-void bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, uint8_t len) {
-    BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT && data != NULL && len > 0 && len <= 64 && id <= 0x7ff);
+bsp_status_t bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, uint8_t len) {
+    if (device < 0 || device >= BSP_CAN_DEVICE_COUNT || data == NULL || len == 0 || len > 64 || id > 0x7ff) return BSP_STATUS_ERROR;
+    const uint32_t dlc = len2code(len);
+    if (dlc == UINT32_MAX) return BSP_STATUS_ERROR;
     FDCAN_TxHeaderTypeDef header = {
         .Identifier = id,
         .IdType = FDCAN_STANDARD_ID,
         .TxFrameType = FDCAN_DATA_FRAME,
-        .DataLength = len2code(len),
+        .DataLength = dlc,
         .ErrorStateIndicator = FDCAN_ESI_ACTIVE,
         .BitRateSwitch = len > 8 ? FDCAN_BRS_ON : FDCAN_BRS_OFF,
         .FDFormat = len > 8 ? FDCAN_FD_CAN : FDCAN_CLASSIC_CAN,
-        .TxEventFifoControl = FDCAN_STORE_TX_EVENTS,
+        .TxEventFifoControl = FDCAN_NO_TX_EVENTS,
         .MessageMarker = 0x01
     };
-    if (HAL_FDCAN_AddMessageToTxFifoQ(handle[device], &header, data) != HAL_OK) {
-        send_error_count[device] ++;
+
+    const unsigned long state = bsp_sys_enter_critical();
+    const bsp_status_t status = bsp_status_from_hal(HAL_FDCAN_AddMessageToTxFifoQ(handle[device], &header, data));
+    stats[device].last_status = status;
+    if (status != BSP_STATUS_OK) {
+        stats[device].tx_error_count++;
     }
+    bsp_sys_exit_critical(state);
+    return status;
 }
 
 static uint8_t code2len(uint32_t l) {
@@ -92,17 +110,26 @@ static uint8_t code2len(uint32_t l) {
     if(l == FDCAN_DLC_BYTES_32) return 32;
     if(l == FDCAN_DLC_BYTES_48) return 48;
     if(l == FDCAN_DLC_BYTES_64) return 64;
-    BSP_ASSERT(0); return 0;
+    return 0;
 }
 
 void bsp_can_callback_sol(bsp_can_e device, uint32_t fifo) {
     FDCAN_RxHeaderTypeDef header;
     static uint8_t buf[BSP_CAN_BUFFER_SIZE] = { 0 };
     while (HAL_FDCAN_GetRxFifoFillLevel(handle[device], fifo)) {
-        if (HAL_FDCAN_GetRxMessage(handle[device], fifo, &header, buf) != HAL_OK) break;
+        if (HAL_FDCAN_GetRxMessage(handle[device], fifo, &header, buf) != HAL_OK) {
+            stats[device].rx_error_count++;
+            stats[device].last_status = BSP_STATUS_ERROR;
+            break;
+        }
         for (uint8_t i = 0; i < cnt[device]; i++) {
             if (pkg_id[device][i] == header.Identifier) {
                 uint8_t len = code2len(header.DataLength);
+                if (len == 0) {
+                    stats[device].rx_error_count++;
+                    stats[device].last_status = BSP_STATUS_ERROR;
+                    break;
+                }
                 memcpy(rx_buffer[device][i], buf, len);
                 if (callback[device][i] != NULL) callback[device][i](device, header.Identifier, rx_buffer[device][i], len);
                 break;
@@ -126,6 +153,25 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *device, uint32_t RxFifo0ITs)
 
 void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *device, uint32_t itflags) {
     if (itflags & FDCAN_IT_BUS_OFF) {
-        CLEAR_BIT(device->Instance->CCCR, FDCAN_CCCR_INIT);
+        bsp_can_e index;
+        if (device->Instance == FDCAN1) index = E_CAN_1;
+        else if (device->Instance == FDCAN2) index = E_CAN_2;
+        else if (device->Instance == FDCAN3) index = E_CAN_3;
+        else return;
+        stats[index].bus_off_count++;
+        stats[index].last_status = BSP_STATUS_OFFLINE;
     }
+}
+
+bsp_can_stats_t bsp_can_stats(bsp_can_e device) {
+    BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT);
+    const unsigned long state = bsp_sys_enter_critical();
+    const bsp_can_stats_t copy = {
+        .tx_error_count = stats[device].tx_error_count,
+        .rx_error_count = stats[device].rx_error_count,
+        .bus_off_count = stats[device].bus_off_count,
+        .last_status = stats[device].last_status,
+    };
+    bsp_sys_exit_critical(state);
+    return copy;
 }

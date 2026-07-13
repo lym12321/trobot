@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "bsp/def.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,7 +16,7 @@ extern "C" {
  * @param r 区间右端点
  * @return [l, r] 区间内的随机数
  */
-int bsp_rng_random(int l, int r);
+bsp_status_t bsp_rng_random(int l, int r, int *result);
 
 #ifdef __cplusplus
 }

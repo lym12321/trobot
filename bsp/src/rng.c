@@ -6,8 +6,12 @@
 
 #include "rng.h"
 
-int bsp_rng_random(int l, int r) {
+bsp_status_t bsp_rng_random(int l, int r, int *result) {
+    if (l > r || result == NULL) return BSP_STATUS_ERROR;
     uint32_t rng;
-    HAL_RNG_GenerateRandomNumber(&hrng, &rng);
-    return (int) (l + rng % (r - l + 1));
+    const bsp_status_t status = bsp_status_from_hal(HAL_RNG_GenerateRandomNumber(&hrng, &rng));
+    if (status != BSP_STATUS_OK) return status;
+    const uint64_t span = (uint64_t) ((int64_t) r - l) + 1;
+    *result = (int) ((int64_t) l + rng % span);
+    return BSP_STATUS_OK;
 }

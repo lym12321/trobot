@@ -11,7 +11,7 @@ extern "C" {
 /**
  *  初始化板载 ws2812
  */
-void bsp_led_init();
+bsp_status_t bsp_led_init();
 
 /**
  * 设置板载 ws2812 颜色 (rgb)

@@ -37,19 +37,21 @@ void bsp_assert_failed(const char *expr, const char *file, int line) {
     }
 
     for (;;) {
-        hiwdg1.Instance->KR = 0x0000AAAAU;
+        if (hiwdg1.Instance != NULL) hiwdg1.Instance->KR = 0x0000AAAAU;
         __asm volatile("nop");
     }
 }
 
-void bsp_hw_init() {
-    bsp_led_init();
+uint32_t bsp_hw_init() {
+    uint32_t failed = 0;
+    if (bsp_led_init() != BSP_STATUS_OK) failed |= BSP_HW_LED;
     bsp_usb_init();
-    bsp_can_init(E_CAN_1);
-    bsp_can_init(E_CAN_2);
-    bsp_can_init(E_CAN_3);
-    bsp_imu_init();
-    bsp_adc_init();
-    bsp_flash_init();
-    bsp_buzzer_init();
+    if (bsp_can_init(E_CAN_1) != BSP_STATUS_OK) failed |= BSP_HW_CAN_1;
+    if (bsp_can_init(E_CAN_2) != BSP_STATUS_OK) failed |= BSP_HW_CAN_2;
+    if (bsp_can_init(E_CAN_3) != BSP_STATUS_OK) failed |= BSP_HW_CAN_3;
+    if (bsp_imu_init() != BSP_STATUS_OK) failed |= BSP_HW_IMU;
+    if (bsp_adc_init() != BSP_STATUS_OK) failed |= BSP_HW_ADC;
+    if (!bsp_flash_init()) failed |= BSP_HW_FLASH;
+    if (bsp_buzzer_init() != BSP_STATUS_OK) failed |= BSP_HW_BUZZER;
+    return failed;
 }
