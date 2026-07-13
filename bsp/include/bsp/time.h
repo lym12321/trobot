@@ -34,6 +34,19 @@ void bsp_time_delay(uint32_t ms);
  */
 void bsp_time_delay_us(uint32_t us);
 
+/**
+ * 启用 DWT 周期计数器 (Cortex-M3/M4/M7)
+ * 需在初始化阶段调用，耗时不计入任务调度
+ */
+void bsp_dwt_init(void);
+
+
+/**
+ * 读取 DWT 周期计数器当前值
+ * @return 自上次复位以来的 CPU 周期数
+ */
+uint32_t bsp_dwt_get(void);
+
 #ifdef __cplusplus
 }
 #endif

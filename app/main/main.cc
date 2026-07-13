@@ -10,9 +10,9 @@
 #include "ins/ins.h"
 #include "rc/dr16.h"
 #include "rc/ht10.h"
+#include "utils/logger.h"
 #include "utils/os.h"
 #include "utils/terminal.h"
-
 extern void example_task(void *args);
 
 extern "C" [[noreturn]] void app_entrance(void *args) {
@@ -25,7 +25,7 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
     // Init Basic Components
 
     // logger::init(E_UART_1, logger::INFO);
-    // terminal::init(E_UART_1, 921600);
+    // terminal::init(E_UART_1);
     // rc::dr16::init(E_UART_5);
     // rc::ht10::init(E_UART_5);
 

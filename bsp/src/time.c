@@ -31,3 +31,13 @@ void bsp_time_delay_us(uint32_t us) {
     uint64_t cur = bsp_time_get_us();
     while (bsp_time_get_us() - cur < us) __NOP();
 }
+
+void bsp_dwt_init(void) {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+uint32_t bsp_dwt_get(void) {
+    return DWT->CYCCNT;
+}

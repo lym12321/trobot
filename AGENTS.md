@@ -50,7 +50,12 @@ Do not rewrite or restructure code speculatively. Every change must follow the e
 
 ### Submodule Synchronization
 
-When a commit is pushed to a submodule under `components/`, the main repository MUST be updated to reference the new submodule commit. After the submodule push, stage the submodule pointer change (`git add components/<name>`), commit it with a message referencing the submodule change, and push the main repository.
+- **Local iteration**: commit only the submodule (`components/<name>`); do NOT sync the trobot superproject. Avoids noise commits like `chore(<name>): update submodule`.
+- **Remote push**: after pushing the submodule, MUST update the submodule pointer in trobot (`git add components/<name>`, commit, push). The remote depends on the pointer to resolve the submodule version.
+
+### Default Configuration in main.cc
+
+`logger::init` and `terminal::init` in `app/main/main.cc` are **commented out by default**. Uncomment them during debugging, but keep them commented when committing. Prevents debug output from occupying the serial port in production firmware.
 
 ### Commit Attribution
 
