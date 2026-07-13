@@ -24,18 +24,51 @@ For Codex sessions in this repository, do static inspection only. Do not run fir
 
 Use C17 for BSP/generated C and C++23 for application/components. Keep four-space indentation, concise functions, and descriptive `snake_case` names. BSP APIs use `bsp_*` and C enums such as `E_CAN_1` or `E_UART_1`; keep HAL, FreeRTOS, SEGGER, CubeMX, and third-party names unchanged. Components use namespaces such as `os`, `motor`, `rc::dr16`, `ins`, and `robot::chassis`, with small classes or structs for typed configuration.
 
-Prefer typed constants, `static constexpr`, local `static` helpers, and `BSP_ASSERT` for invariants. Comments should explain hardware timing, units, protocol layouts, calibration, concurrency, or DMA/cache constraints.
+Prefer typed constants, `static constexpr`, local `static` helpers, and `BSP_ASSERT` for invariants. Keep comments minimal — only for hardware timing, units, protocol layouts, calibration, concurrency, or DMA/cache constraints. Do not add section-header banners, ASCII art, "Created by" blocks, or explanatory comments for self-documenting code. When in doubt, omit the comment.
 
 ## RTOS & Embedded Design Guidelines
 
 Initialize board hardware through `bsp_hw_init()` before starting application tasks. Create tasks from `app_entrance()` using `os::task::static_create()` or FreeRTOS APIs, and keep watchdog refresh paths explicit. Use `os::task::sleep()` or `vTaskDelayUntil()` for periodic work; reserve busy microsecond waits for short hardware timing.
 
-Keep ISRs and HAL callbacks short. Defer work through callbacks, queues, notifications, or component state updates. Protect shared ISR/task state with `bsp/sys.h` critical-section helpers. DMA-visible buffers may need `_ram_d1`; review lifetime and cache behavior before changing UART, CAN, SPI, USB, IMU, or flash paths.
+Keep ISRs and HAL callbacks short. Defer work through callbacks, queues, notifications, or component state updates. Protect shared ISR/task state with `bsp/sys.h` critical-section helpers. DMA-visible buffers must be placed in a DMA-accessible RAM domain; review lifetime and cache behavior before changing UART, CAN, SPI, USB, IMU, or flash paths.
 
 ## CubeMX, Testing, and PRs
 
 Treat `trobot.ioc` as the source for peripheral, clock, DMA, NVIC, and FreeRTOS configuration. Keep custom logic out of generated files unless inside user sections. BSP drivers should expose narrow C wrappers and hide HAL handles, buffers, filters, and callbacks in `bsp/src/`.
 
+**CubeMX modification boundary**: Changes that require adjusting CubeMX-generated content — including `FreeRTOSConfig.h`, interrupt priorities in NVIC, peripheral pin assignments, clock tree, DMA streams, linker script memory regions, or any `.ioc`-managed setting — MUST NOT be made directly by the agent. Instead, describe the required CubeMX change and ask the user to apply it manually through the CubeMX IDE. Direct edits to `trobot.ioc`, generated `Core/` files outside `USER CODE` sections, `Drivers/`, `Middlewares/`, `USB_DEVICE/`, or `startup_stm32h723xx.s` are PROHIBITED.
+
 No standalone automated test harness is present. For firmware changes, run a clean CMake build and document board verification: flash result, OpenOCD verify status, terminal output, sensor data, CAN/UART traffic, or motor response.
 
 History uses `feat:`, `fix:`, `chore:`, and `doc:` prefixes, sometimes with scopes like `feat (ins):`. PRs should include a summary, affected modules, build results, hardware verification status, and linked issues when applicable.
+
+## Agent Conventions
+
+### Modification Discipline
+
+Do not rewrite or restructure code speculatively. Every change must follow the existing intent, naming, formatting, and architectural patterns of the file it touches. Before making a change that alters more than a few localized lines — or that changes interfaces, deletes user-authored comments, renames symbols, or introduces new abstractions — ask the user whether the change is desired. When in doubt, ask.
+
+### Submodule Synchronization
+
+When a commit is pushed to a submodule under `components/`, the main repository MUST be updated to reference the new submodule commit. After the submodule push, stage the submodule pointer change (`git add components/<name>`), commit it with a message referencing the submodule change, and push the main repository.
+
+### Commit Attribution
+
+Commit messages MUST be written in Chinese. Use the format `<type>(<scope>): <中文简述>`, e.g. `fix(bsp): 修复 CAN 发送临界区过长问题`. The agent marker `[agent: <model>]` goes on a separate line after the body, e.g.:
+
+```
+fix(bsp): 替换运行时 BSP_ASSERT 为错误返回
+
+[agent: deepseek/deepseek-v4-pro]
+```
+
+### Modification Review
+
+After every modification, the agent MUST review the changes for correctness before yielding. The review scope includes but is not limited to:
+- Code logic and invariants
+- API contract consistency (callers updated, signatures match)
+- Concurrency correctness (ISR/task shared state)
+- Memory safety (buffer sizes, DMA alignment, RAM domain placement)
+- Runtime `BSP_ASSERT` misuse (assert only for init-time errors, never runtime)
+
+Non-Codex agents MUST additionally run a compilation test (`cmake --build --preset Debug`) and verify zero errors before considering the modification complete. Codex agents perform static review only, per the Codex Execution Policy above.

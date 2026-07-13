@@ -20,8 +20,6 @@ void bsp_assert_failed(const char *expr, const char *file, int line) __attribute
 #define BSP_ASSERT_MSG(expr, msg) \
     do { if (!(expr)) bsp_assert_failed(#expr, __FILE__, __LINE__); } while (0)
 
-#define _ram_d1 __attribute__((section(".ram_d1")))
-
 typedef enum {
     BSP_STATUS_OK = 0,
     BSP_STATUS_ERROR,

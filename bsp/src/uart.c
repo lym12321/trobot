@@ -29,8 +29,8 @@ static volatile uint8_t busy[BSP_UART_DEVICE_COUNT];
 static uint8_t rq_buffer[BSP_UART_DEVICE_COUNT][BSP_UART_QUEUE_SIZE];
 
 static bsp_uart_callback_t callback[BSP_UART_DEVICE_COUNT];
-_ram_d1 static uint8_t tx_buffer[BSP_UART_DEVICE_COUNT][BSP_UART_BUFFER_SIZE];
-_ram_d1 static uint8_t rx_buffer[BSP_UART_DEVICE_COUNT][2][BSP_UART_BUFFER_SIZE];
+static uint8_t tx_buffer[BSP_UART_DEVICE_COUNT][BSP_UART_BUFFER_SIZE];
+static uint8_t rx_buffer[BSP_UART_DEVICE_COUNT][2][BSP_UART_BUFFER_SIZE];
 static uint8_t rx_active[BSP_UART_DEVICE_COUNT];
 static volatile bsp_uart_stats_t stats[BSP_UART_DEVICE_COUNT];
 

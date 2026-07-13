@@ -20,7 +20,7 @@ static uint32_t pkg_id[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 static bsp_can_callback_t callback[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 static volatile bsp_can_stats_t stats[BSP_CAN_DEVICE_COUNT];
 
-_ram_d1 static uint8_t rx_buffer[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD][BSP_CAN_BUFFER_SIZE];
+static uint8_t rx_buffer[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD][BSP_CAN_BUFFER_SIZE];
 
 bsp_status_t bsp_can_init(bsp_can_e device) {
     BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT);

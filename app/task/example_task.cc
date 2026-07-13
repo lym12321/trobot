@@ -29,7 +29,7 @@ robot::chassis::omni chassis(m0, m1, m2, m3, (controller::pid::pid_para_t) {
         // Do something
         // chassis.update(0, 0, 1);
         // bsp_uart_printf_async(E_UART_1, "man what can i say\r\n");
-        const auto imu = ins::snapshot();
+        const auto imu = ins::state();
         vofa::send(E_UART_1, imu.accel[0], imu.accel[1], imu.accel[2], imu.gyro[0], imu.gyro[1], imu.gyro[2], imu.roll, imu.pitch, imu.yaw);
         os::task::sleep(1);
     }
