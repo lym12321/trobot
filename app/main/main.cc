@@ -8,12 +8,19 @@
 
 #include "bsp/buzzer.h"
 #include "ins/ins.h"
+#include "music/music.h"
 #include "rc/dr16.h"
 #include "rc/ht10.h"
 #include "utils/logger.h"
 #include "utils/os.h"
 #include "utils/terminal.h"
 extern void example_task(void *args);
+
+static constexpr music::tone_t ready_tone[] {
+    { 4500, 75 },
+    { 0, 50 },
+    { 4500, 75 },
+};
 
 extern "C" [[noreturn]] void app_entrance(void *args) {
     uint32_t hw_failed = bsp_hw_init();
@@ -24,6 +31,7 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
 
     // Init Basic Components
 
+    music::init();
     // logger::init(E_UART_1, logger::INFO);
     // terminal::init(E_UART_1);
     // rc::dr16::init(E_UART_5);
@@ -42,9 +50,7 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
     ins::init();
     while (!ins::ready()) os::task::sleep(5), bsp_iwdg_refresh();
 
-    bsp_buzzer_flash(4500, 0.2f, 75);
-    bsp_time_delay(50);
-    bsp_buzzer_flash(4500, 0.2f, 75);
+    music::play_blocking(ready_tone);
 
     // Init Application Tasks
     BSP_ASSERT(os::task::static_create(
