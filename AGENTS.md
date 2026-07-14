@@ -50,6 +50,7 @@ Do not rewrite or restructure code speculatively. Every change must follow the e
 
 ### Submodule Synchronization
 
+- **URL protocol**: Submodule URLs in `.gitmodules` MUST use HTTPS, never SSH.
 - **Local iteration**: commit only the submodule (`components/<name>`); do NOT sync the trobot superproject. Avoids noise commits like `chore(<name>): update submodule`.
 - **Remote push**: after pushing the submodule, MUST update the submodule pointer in trobot (`git add components/<name>`, commit, push). The remote depends on the pointer to resolve the submodule version.
 
