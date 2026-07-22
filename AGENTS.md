@@ -14,6 +14,13 @@ Hardware ownership belongs in `bsp/`: public C headers are in `bsp/include/bsp/`
 - `cmake --build --preset Release`: build the optimized preset.
 - `cmake --build --preset Debug --target flash_and_verify`: flash and verify through OpenOCD using `stlink.cfg`.
 
+### DAPLink GDB Debugging
+
+- Start the GDB server from the repository root with `openocd -f daplink.cfg`.
+- In another terminal, run `arm-none-eabi-gdb build/Debug/trobot.elf`, then connect with `target extended-remote localhost:3333`.
+- Use `monitor reset halt` to reproduce initialization paths, set breakpoints, and run `continue`. Use `detach` before closing GDB when the target should keep running.
+- Ensure the ELF matches the firmware on the target. Starting a debug session does not authorize `load`, `monitor program`, or any flash operation; those require an explicit user request.
+
 Use CLion CMake preset profiles. After CubeMX regeneration, check whether `STM32H723XG_FLASH.ld` was overwritten.
 
 ## Codex Execution Policy

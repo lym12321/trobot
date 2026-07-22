@@ -127,18 +127,29 @@ bsp_status_t bsp_uart_set_callback(bsp_uart_e device, bsp_uart_callback_t func) 
     BSP_ASSERT(0 <= device && device < BSP_UART_DEVICE_COUNT && callback[device] == NULL && func != NULL);
     BSP_ASSERT(handle[device]->hdmarx != NULL);     // 确保外设开启了 RX DMA
 
+    bsp_uart_handle_t *const h = handle[device];
+    const unsigned long state = bsp_sys_enter_critical();
+    const uint32_t receiver_enabled = READ_BIT(h->Instance->CR1, USART_CR1_RE);
+
+    // 防止 DMA 接管前持续输入触发 ORE 中断
+    CLEAR_BIT(h->Instance->CR1, USART_CR1_RE);
+    __HAL_UART_CLEAR_FLAG(h, UART_CLEAR_PEF | UART_CLEAR_FEF | UART_CLEAR_NEF | UART_CLEAR_OREF);
+    __HAL_UART_SEND_REQ(h, UART_RXDATA_FLUSH_REQUEST);
+
     rx_active[device] = 0;
     const bsp_status_t status = bsp_status_from_hal(
-        HAL_UARTEx_ReceiveToIdle_DMA(handle[device], rx_buffer[device][rx_active[device]], BSP_UART_BUFFER_SIZE)
+        HAL_UARTEx_ReceiveToIdle_DMA(h, rx_buffer[device][rx_active[device]], BSP_UART_BUFFER_SIZE)
     );
     stats[device].last_status = status;
-    if (status != BSP_STATUS_OK) {
+    if (status == BSP_STATUS_OK) {
+        callback[device] = func;
+        __HAL_DMA_DISABLE_IT(h->hdmarx, DMA_IT_HT);
+    } else {
         stats[device].rx_error_count++;
-        return status;
     }
-    callback[device] = func;
-    __HAL_DMA_DISABLE_IT(handle[device]->hdmarx, DMA_IT_HT);
-    return BSP_STATUS_OK;
+    if (receiver_enabled != 0U) SET_BIT(h->Instance->CR1, USART_CR1_RE);
+    bsp_sys_exit_critical(state);
+    return status;
 }
 
 // 不要在 set_callback 后执行 set_baudrate, 否则可能会破坏空闲中断状态
