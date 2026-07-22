@@ -14,18 +14,19 @@ Hardware ownership belongs in `bsp/`: public C headers are in `bsp/include/bsp/`
 - `cmake --build --preset Release`: build the optimized preset.
 - `cmake --build --preset Debug --target flash_and_verify`: flash and verify through OpenOCD using `stlink.cfg`.
 
-### DAPLink GDB Debugging
+### OpenOCD GDB Debugging
 
-- Start the GDB server from the repository root with `openocd -f daplink.cfg`.
+- Before starting OpenOCD, confirm whether the connected debug probe is DAPLink/CMSIS-DAP or ST-Link; do not infer the probe type from prior sessions or the default flash target.
+- Start the GDB server from the repository root with `openocd -f daplink.cfg` for DAPLink/CMSIS-DAP, or `openocd -f stlink.cfg` for ST-Link.
 - In another terminal, run `arm-none-eabi-gdb build/Debug/trobot.elf`, then connect with `target extended-remote localhost:3333`.
-- Use `monitor reset halt` to reproduce initialization paths, set breakpoints, and run `continue`. Use `detach` before closing GDB when the target should keep running.
+- Use `monitor reset halt` to reproduce initialization paths, set breakpoints, and run `continue`. When leaving a halted session, run `monitor resume` followed by `detach` so the target keeps running.
 - Ensure the ELF matches the firmware on the target. Starting a debug session does not authorize `load`, `monitor program`, or any flash operation; those require an explicit user request.
 
 Use CLion CMake preset profiles. After CubeMX regeneration, check whether `STM32H723XG_FLASH.ld` was overwritten.
 
 ## Codex Execution Policy
 
-For Codex sessions in this repository, do static inspection only. Do not run firmware builds, `make`, CMake/Ninja build commands, OpenOCD, flash, or verify targets. Build and hardware verification are handled by other models or by humans.
+Before build verification, every agent MUST determine whether it is running as Codex. A Codex agent MUST then inspect the active permission profile. If the session has Full Access (`danger-full-access` or an equivalent unrestricted profile), it MUST run the relevant CMake build and report the result. If the session is sandboxed, restricted, or the permission level cannot be confirmed, it MUST NOT run firmware builds, `make`, or CMake/Ninja build commands, and MUST tell the user that build verification was skipped because Full Access is unavailable. Build permission does not authorize OpenOCD, flash, or hardware verify targets; those still require an explicit user request.
 
 ## Coding Style & Naming Conventions
 
@@ -84,4 +85,4 @@ After every modification, the agent MUST review the changes for correctness befo
 - Memory safety (buffer sizes, DMA alignment, RAM domain placement)
 - Runtime `BSP_ASSERT` misuse (assert only for init-time errors, never runtime)
 
-Non-Codex agents MUST additionally run a compilation test (`cmake --build --preset Debug`) and verify zero errors before considering the modification complete. Codex agents perform static review only, per the Codex Execution Policy above.
+Non-Codex agents MUST additionally run a compilation test (`cmake --build --preset Debug`) and verify zero errors before considering the modification complete. Codex agents MUST follow the permission-dependent build policy above: build under Full Access, otherwise perform static review and explicitly report that compilation was skipped.
