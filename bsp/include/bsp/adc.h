@@ -5,6 +5,8 @@
 #ifndef TROBOT_VBUS_H
 #define TROBOT_VBUS_H
 
+#include "bsp/def.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,7 +14,7 @@ extern "C" {
 /**
  * 初始化 ADC
  */
-void bsp_adc_init(void);
+bsp_status_t bsp_adc_init(void);
 
 /**
  * 获取 vbus 电压

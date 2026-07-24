@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-void bsp_assert_failed(const char *expr, const char *file, int line);
+void bsp_assert_failed(const char *expr, const char *file, int line) __attribute__((noreturn));
 
 #define BSP_ASSERT(expr) \
     do { if (!(expr)) bsp_assert_failed(#expr, __FILE__, __LINE__); } while (0)
@@ -20,7 +20,22 @@ void bsp_assert_failed(const char *expr, const char *file, int line);
 #define BSP_ASSERT_MSG(expr, msg) \
     do { if (!(expr)) bsp_assert_failed(#expr, __FILE__, __LINE__); } while (0)
 
-#define _ram_d1 __attribute__((section(".ram_d1")))
+typedef enum {
+    BSP_STATUS_OK = 0,
+    BSP_STATUS_ERROR,
+    BSP_STATUS_BUSY,
+    BSP_STATUS_TIMEOUT,
+    BSP_STATUS_OFFLINE,
+} bsp_status_t;
+
+static inline bsp_status_t bsp_status_from_hal(HAL_StatusTypeDef status) {
+    switch (status) {
+        case HAL_OK: return BSP_STATUS_OK;
+        case HAL_BUSY: return BSP_STATUS_BUSY;
+        case HAL_TIMEOUT: return BSP_STATUS_TIMEOUT;
+        default: return BSP_STATUS_ERROR;
+    }
+}
 
 typedef struct {
     GPIO_TypeDef *port;

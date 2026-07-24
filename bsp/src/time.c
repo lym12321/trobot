@@ -19,15 +19,25 @@ uint64_t bsp_time_get_us() {
     uint32_t ms_now = xTaskGetTickCount();
     uint32_t tick_val_now = SysTick->VAL;
     return ms_old == ms_now ?
-        ms_now * 1000 + 1000 - tick_val_old * 1000 / (SysTick->LOAD + 1):
-        ms_now * 1000 + 1000 - tick_val_now * 1000 / (SysTick->LOAD + 1);
+        (uint64_t) ms_now * 1000 + 1000 - tick_val_old * 1000 / (SysTick->LOAD + 1):
+        (uint64_t) ms_now * 1000 + 1000 - tick_val_now * 1000 / (SysTick->LOAD + 1);
 }
 
 void bsp_time_delay(uint32_t ms) {
-    vTaskDelay(ms);
+    vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
 void bsp_time_delay_us(uint32_t us) {
     uint64_t cur = bsp_time_get_us();
     while (bsp_time_get_us() - cur < us) __NOP();
+}
+
+void bsp_dwt_init(void) {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+}
+
+uint32_t bsp_dwt_get(void) {
+    return DWT->CYCCNT;
 }
