@@ -65,7 +65,7 @@ static const uint8_t device_descriptor[] = {
 
 static const uint8_t config_descriptor[] = {
     USB_CONFIG_DESCRIPTOR_INIT(USB_CONFIG_SIZE, 0x03, 0x01, USB_CONFIG_BUS_POWERED, 100),
-    CDC_ACM_DESCRIPTOR_INIT(0x00, CDC_INT_EP, CDC_OUT_EP, CDC_IN_EP, CDC_MAX_PACKET_SIZE, 0x00),
+    CDC_ACM_DESCRIPTOR_INIT(0x00, CDC_INT_EP, CDC_OUT_EP, CDC_IN_EP, CDC_MAX_PACKET_SIZE, 0x05),
     USB_INTERFACE_DESCRIPTOR_INIT(0x02, 0x00, 0x02, 0xFF, 0x00, 0x00, 0x04),
     USB_ENDPOINT_DESCRIPTOR_INIT(
         WINUSB_OUT_EP, USB_ENDPOINT_TYPE_BULK, WINUSB_MAX_PACKET_SIZE, 0x00
@@ -93,9 +93,10 @@ static const char *string_descriptor_callback(uint8_t speed, uint8_t index) {
     switch (index) {
         case 0: return language_id;
         case 1: return "trobot";
-        case 2: return "trobot cdc + debug";
+        case 2: return "dm-mc02";
         case 3: return serial_number;
         case 4: return "trobot debug";
+        case 5: return "trobot cdc";
         default: return NULL;
     }
 }
