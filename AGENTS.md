@@ -76,12 +76,12 @@ Do not rewrite or restructure code speculatively. Every change must follow the e
 
 ### Commit Attribution
 
-Commit messages MUST be written in Chinese. Use the format `<type>(<scope>): <中文简述>`, e.g. `fix(bsp): 修复 CAN 发送临界区过长问题`. The agent marker `[agent: <model>]` goes on a separate line after the body, e.g.:
+Commit messages MUST be written in Chinese. Use the format `<type>(<scope>): <中文简述>`, e.g. `fix(bsp): 修复 CAN 发送临界区过长问题`. The agent marker goes on a separate line after the body and MUST include the provider, exact model variant, and reasoning effort whenever the runtime exposes them. Use `[agent: <provider>/<model>, reasoning=<effort>]`; do not shorten the model to a generic family name or guess unavailable fields. For example:
 
 ```
 fix(bsp): 替换运行时 BSP_ASSERT 为错误返回
 
-[agent: deepseek/deepseek-v4-pro]
+[agent: openai/gpt-5.6-sol, reasoning=xhigh]
 ```
 
 ### Modification Review
