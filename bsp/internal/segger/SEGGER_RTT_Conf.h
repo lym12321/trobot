@@ -1,0 +1,7 @@
+#ifndef SEGGER_RTT_CONF_H
+#define SEGGER_RTT_CONF_H
+
+#define RTT_USE_ASM 0
+#define SEGGER_RTT_MAX_INTERRUPT_PRIORITY (0x50u)
+
+#endif

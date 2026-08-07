@@ -14,8 +14,28 @@
 
 #include "task.h"
 #include "iwdg.h"
+#include "main.h"
 #include "bsp/usb.h"
 #include "bsp/adc.h"
+
+#include "segger/trace.h"
+
+static uint8_t debug_key_is_low(void) {
+    return HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET;
+}
+
+bool bsp_debug_mode_requested(void) {
+    BSP_ASSERT(xTaskGetSchedulerState() == taskSCHEDULER_RUNNING);
+    if (!debug_key_is_low()) return false;
+
+    const TickType_t started = xTaskGetTickCount();
+    while (xTaskGetTickCount() - started < pdMS_TO_TICKS(100U)) {
+        if (!debug_key_is_low()) return false;
+        bsp_iwdg_refresh();
+        vTaskDelay(pdMS_TO_TICKS(5U));
+    }
+    return debug_key_is_low();
+}
 
 void bsp_iwdg_refresh() {
     HAL_IWDG_Refresh(&hiwdg1);
@@ -43,16 +63,23 @@ void bsp_assert_failed(const char *expr, const char *file, int line) {
     }
 }
 
-uint32_t bsp_hw_init() {
+uint32_t bsp_debug_hw_init() {
+    bsp_segger_trace_init();
+
     uint32_t failed = 0;
     if (bsp_led_init() != BSP_STATUS_OK) failed |= BSP_HW_LED;
-    bsp_usb_init();
+    if (bsp_flash_init() != BSP_STATUS_OK) failed |= BSP_HW_FLASH;
+    if (bsp_usb_init() != BSP_STATUS_OK) failed |= BSP_HW_USB;
+    return failed;
+}
+
+uint32_t bsp_hw_init() {
+    uint32_t failed = bsp_debug_hw_init();
     if (bsp_can_init(E_CAN_1) != BSP_STATUS_OK) failed |= BSP_HW_CAN_1;
     if (bsp_can_init(E_CAN_2) != BSP_STATUS_OK) failed |= BSP_HW_CAN_2;
     if (bsp_can_init(E_CAN_3) != BSP_STATUS_OK) failed |= BSP_HW_CAN_3;
     if (bsp_imu_init() != BSP_STATUS_OK) failed |= BSP_HW_IMU;
     if (bsp_adc_init() != BSP_STATUS_OK) failed |= BSP_HW_ADC;
-    if (!bsp_flash_init()) failed |= BSP_HW_FLASH;
     if (bsp_buzzer_init() != BSP_STATUS_OK) failed |= BSP_HW_BUZZER;
     return failed;
 }

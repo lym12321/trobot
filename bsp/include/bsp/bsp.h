@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef enum {
@@ -16,6 +17,7 @@ typedef enum {
     BSP_HW_FLASH  = 1U << 6,
     BSP_HW_BUZZER = 1U << 7,
     BSP_HW_LCD    = 1U << 8,
+    BSP_HW_USB    = 1U << 9,
 } bsp_hw_e;
 
 #ifdef __cplusplus
@@ -26,6 +28,16 @@ extern "C" {
  * bsp 硬件初始化
  */
 uint32_t bsp_hw_init();
+
+/**
+ * 调试模式所需硬件初始化
+ */
+uint32_t bsp_debug_hw_init();
+
+/**
+ * 启动阶段检测调试模式按键
+ */
+bool bsp_debug_mode_requested(void);
 
 /**
  * 喂狗

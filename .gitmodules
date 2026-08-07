@@ -22,3 +22,6 @@
 [submodule "components/music"]
 	path = components/music
 	url = https://github.com/lym12321/tr_comp_music.git
+[submodule "bsp/third_party/cherryusb"]
+	path = bsp/third_party/cherryusb
+	url = https://github.com/cherry-embedded/CherryUSB.git
