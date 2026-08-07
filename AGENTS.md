@@ -4,7 +4,7 @@
 
 TRobot is an STM32H723 firmware framework built with CMake, FreeRTOS, STM32 HAL, and C++ components. CubeMX-generated code stays in `Core/`, `Drivers/`, `Middlewares/`, `USB_DEVICE/`, and `cmake/stm32cubemx/`. The generated FreeRTOS `entrance` thread calls C++ `app_entrance()` in `app/main/main.cc`; keep application task orchestration and robot behavior under `app/`.
 
-Hardware ownership belongs in `bsp/`: public C headers are in `bsp/include/bsp/`, implementations in `bsp/src/`, private helpers in `bsp/internal/`, and bundled ports such as SEGGER, EasyFlash, USB, and W25Q64 remain in their existing folders. Reusable modules live in `components/<name>/` with `include/<name>/`, `src/`, optional `internal/`, and a `CMakeLists.txt` exporting `components::<name>`.
+Hardware ownership belongs in `bsp/`: public C headers are in `bsp/include/bsp/`, implementations in `bsp/src/`, private helpers in `bsp/internal/`, and bundled third-party code is in `bsp/third_party/`. Reusable modules live in `components/<name>/` with `include/<name>/`, `src/`, optional `internal/`, and a `CMakeLists.txt` exporting `components::<name>`.
 
 ## Build, Test, and Development Commands
 
@@ -30,9 +30,9 @@ Before build verification, every agent MUST determine whether it is running as C
 
 ## Coding Style & Naming Conventions
 
-Use C17 for BSP/generated C and C++23 for application/components. Keep four-space indentation, concise functions, and descriptive `snake_case` names. BSP APIs use `bsp_*` and C enums such as `E_CAN_1` or `E_UART_1`; keep HAL, FreeRTOS, SEGGER, CubeMX, and third-party names unchanged. Components use namespaces such as `os`, `motor`, `rc::dr16`, `ins`, and `robot::chassis`, with small classes or structs for typed configuration.
+Use C17 for BSP/generated C and C++23 for application/components. Prioritize runtime and memory efficiency, then keep the implementation as simple as those constraints allow. Keep four-space indentation and concise functions. Use short, clear `snake_case` names; avoid both verbose names and obscure abbreviations. BSP APIs use `bsp_*` and C enums such as `E_CAN_1` or `E_UART_1`; keep HAL, FreeRTOS, SEGGER, CubeMX, and third-party names unchanged. Components use namespaces such as `os`, `motor`, `rc::dr16`, `ins`, and `robot::chassis`, with small classes or structs for typed configuration.
 
-Prefer typed constants, `static constexpr`, local `static` helpers, and `BSP_ASSERT` for invariants. Keep comments minimal — only for hardware timing, units, protocol layouts, calibration, concurrency, or DMA/cache constraints. Do not add section-header banners, ASCII art, "Created by" blocks, or explanatory comments for self-documenting code. When in doubt, omit the comment.
+Use named constants only when a value is reused, defines a protocol/hardware/storage invariant, or determines static memory layout. Keep one-off values at their use site; do not add file-scope constants as speculative configuration. Prefer local `static` helpers and `BSP_ASSERT` for invariants. Keep comments minimal — only for hardware timing, units, protocol layouts, calibration, concurrency, or DMA/cache constraints. Do not add section-header banners, ASCII art, "Created by" blocks, or explanatory comments for self-documenting code. When in doubt, omit the comment.
 
 ## RTOS & Embedded Design Guidelines
 
@@ -51,6 +51,14 @@ No standalone automated test harness is present. For firmware changes, run a cle
 History uses `feat:`, `fix:`, `chore:`, and `doc:` prefixes, sometimes with scopes like `feat (ins):`. PRs should include a summary, affected modules, build results, hardware verification status, and linked issues when applicable.
 
 ## Agent Conventions
+
+### Branch and Commit Policy
+
+- Development work MUST be performed on the local `dev` branch, which tracks `origin/dev`. Do not create commits directly on `main`.
+- Before creating any commit, verify that the current branch is `dev`. Preserve unrelated user changes and do not discard or stash them without explicit approval.
+- Changes may be merged from `dev` into `main` only after validation and human review have completed.
+- A request to commit or merge into `main` requires a second explicit confirmation immediately before the operation. The initial request to make or merge the change does not count as that confirmation.
+- Never push `main` or perform a `dev`-to-`main` merge without that second confirmation.
 
 ### Modification Discipline
 
