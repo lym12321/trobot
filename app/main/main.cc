@@ -14,16 +14,23 @@
 #include "utils/logger.h"
 #include "utils/os.h"
 #include "utils/terminal.h"
+#include "debug_mode.h"
+
 extern void example_task(void *args);
 
-static constexpr music::tone_t ready_tone[] {
-    { 4500, 75 },
-    { 0, 50 },
-    { 4500, 75 },
-};
+[[noreturn]] static void run_debug_mode(uint32_t hw_failed) {
+    const bool ready =
+        (hw_failed & (BSP_HW_FLASH | BSP_HW_USB)) == 0 &&
+        logger::init_flash(logger::NONE) && debug_mode::init();
+    bsp_led_set(ready ? 0 : 50, 0, ready ? 50 : 0);
+    debug_mode::run(ready);
+}
 
 extern "C" [[noreturn]] void app_entrance(void *args) {
-    uint32_t hw_failed = bsp_hw_init();
+    const bool debug_mode = bsp_debug_mode_requested();
+    uint32_t hw_failed = debug_mode ? bsp_debug_hw_init() : bsp_hw_init();
+
+    if (debug_mode) run_debug_mode(hw_failed);
 
     bsp_led_set(hw_failed == 0 ? 0 : 50, hw_failed == 0 ? 50 : 0, 0);
     bsp_buzzer_flash(4500, 0.2f, 100);
@@ -32,6 +39,7 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
     // Init Basic Components
 
     music::init();
+    logger::init_flash(logger::WARNING);
     // logger::init(E_UART_1, logger::INFO);
     // terminal::init(E_UART_1);
     // rc::dr16::init(E_UART_5);
@@ -50,6 +58,11 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
     ins::init();
     while (!ins::ready()) os::task::sleep(5), bsp_iwdg_refresh();
 
+    constexpr music::tone_t ready_tone[] {
+        { 4500, 75 },
+        { 0, 50 },
+        { 4500, 75 },
+    };
     music::play_blocking(ready_tone);
 
     // Init Application Tasks
