@@ -16,7 +16,8 @@ static bsp_can_handle_t *handle[BSP_CAN_DEVICE_COUNT] = {
 };
 
 static uint8_t cnt[BSP_CAN_DEVICE_COUNT];
-static uint32_t pkg_id[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
+static uint32_t filter_id[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
+static uint32_t filter_mask[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 static bsp_can_callback_t callback[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 static volatile bsp_can_stats_t stats[BSP_CAN_DEVICE_COUNT];
 
@@ -26,7 +27,9 @@ bsp_status_t bsp_can_init(bsp_can_e device) {
     BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT);
     HAL_StatusTypeDef hal = HAL_FDCAN_ActivateNotification(
         handle[device],
-        FDCAN_IT_RX_FIFO0_NEW_MESSAGE | FDCAN_IT_BUS_OFF,
+        FDCAN_IT_RX_FIFO0_NEW_MESSAGE |
+        FDCAN_IT_RX_FIFO0_MESSAGE_LOST |
+        FDCAN_IT_BUS_OFF,
         0
     );
     if (hal == HAL_OK) hal = HAL_FDCAN_ConfigGlobalFilter(handle[device], FDCAN_REJECT, FDCAN_REJECT, FDCAN_REJECT_REMOTE, FDCAN_REJECT_REMOTE);
@@ -37,19 +40,34 @@ bsp_status_t bsp_can_init(bsp_can_e device) {
 }
 
 bsp_status_t bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callback_t func) {
-    BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT && cnt[device] < BSP_CAN_FILTER_LIMIT_STD && func != NULL && id <= 0x7ff);
-    pkg_id[device][cnt[device]] = id;
-    callback[device][cnt[device]] = func;
+    return bsp_can_set_mask_callback(device, id, 0x7ff, func);
+}
 
-    // 确保同一 CAN 总线上注册的 id 不重复
-    for (int i = 0; i < cnt[device]; i++) BSP_ASSERT(pkg_id[device][i] != id);
+bsp_status_t bsp_can_set_mask_callback(
+    bsp_can_e device,
+    uint32_t id,
+    uint32_t mask,
+    bsp_can_callback_t func
+) {
+    if (device < 0 || device >= BSP_CAN_DEVICE_COUNT || id > 0x7ff ||
+        mask > 0x7ff || func == NULL || cnt[device] >= BSP_CAN_FILTER_LIMIT_STD) {
+        return BSP_STATUS_ERROR;
+    }
+
+    for (uint8_t i = 0; i < cnt[device]; i++) {
+        if (filter_id[device][i] == id && filter_mask[device][i] == mask) {
+            return BSP_STATUS_ERROR;
+        }
+    }
+
+    const uint8_t index = cnt[device];
 
     FDCAN_FilterTypeDef filter = {
         .IdType = FDCAN_STANDARD_ID,
-        .FilterIndex = cnt[device],
+        .FilterIndex = index,
         .FilterType = FDCAN_FILTER_MASK,
         .FilterID1 = id,
-        .FilterID2 = 0x7ff,
+        .FilterID2 = mask,
         .FilterConfig = FDCAN_FILTER_TO_RXFIFO0,
     };
 
@@ -57,7 +75,10 @@ bsp_status_t bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callbac
     stats[device].last_status = status;
     if (status != BSP_STATUS_OK) return status;
 
-    cnt[device] ++;
+    filter_id[device][index] = id;
+    filter_mask[device][index] = mask;
+    callback[device][index] = func;
+    cnt[device]++;
     return BSP_STATUS_OK;
 }
 
@@ -102,7 +123,7 @@ bsp_status_t bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, ui
 }
 
 static uint8_t code2len(uint32_t l) {
-    if(l <= 8) return l;
+    if(l <= FDCAN_DLC_BYTES_8) return (uint8_t) l;
     if(l == FDCAN_DLC_BYTES_12) return 12;
     if(l == FDCAN_DLC_BYTES_16) return 16;
     if(l == FDCAN_DLC_BYTES_20) return 20;
@@ -110,7 +131,7 @@ static uint8_t code2len(uint32_t l) {
     if(l == FDCAN_DLC_BYTES_32) return 32;
     if(l == FDCAN_DLC_BYTES_48) return 48;
     if(l == FDCAN_DLC_BYTES_64) return 64;
-    return 0;
+    return UINT8_MAX;
 }
 
 void bsp_can_callback_sol(bsp_can_e device, uint32_t fifo) {
@@ -122,33 +143,38 @@ void bsp_can_callback_sol(bsp_can_e device, uint32_t fifo) {
             stats[device].last_status = BSP_STATUS_ERROR;
             break;
         }
-        for (uint8_t i = 0; i < cnt[device]; i++) {
-            if (pkg_id[device][i] == header.Identifier) {
-                uint8_t len = code2len(header.DataLength);
-                if (len == 0) {
-                    stats[device].rx_error_count++;
-                    stats[device].last_status = BSP_STATUS_ERROR;
-                    break;
-                }
-                memcpy(rx_buffer[device][i], buf, len);
-                if (callback[device][i] != NULL) callback[device][i](device, header.Identifier, rx_buffer[device][i], len);
-                break;
-            }
+        if (header.FilterIndex >= cnt[device]) continue;
+
+        const uint8_t len = code2len(header.DataLength);
+        if (len == UINT8_MAX) {
+            stats[device].rx_error_count++;
+            stats[device].last_status = BSP_STATUS_ERROR;
+            continue;
+        }
+
+        const uint8_t index = (uint8_t) header.FilterIndex;
+        memcpy(rx_buffer[device][index], buf, len);
+        if (callback[device][index] != NULL) {
+            callback[device][index](device, header.Identifier, rx_buffer[device][index], len);
         }
     }
 }
 
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *device, uint32_t RxFifo0ITs) {
-    UNUSED(RxFifo0ITs);
+    bsp_can_e index;
     switch((uint32_t) device->Instance) {
     case (uint32_t) FDCAN1:
-        bsp_can_callback_sol(E_CAN_1, FDCAN_RX_FIFO0); break;
+        index = E_CAN_1; break;
     case (uint32_t) FDCAN2:
-        bsp_can_callback_sol(E_CAN_2, FDCAN_RX_FIFO0); break;
+        index = E_CAN_2; break;
     case (uint32_t) FDCAN3:
-        bsp_can_callback_sol(E_CAN_3, FDCAN_RX_FIFO0); break;
-    default: break;
+        index = E_CAN_3; break;
+    default: return;
     }
+    if (RxFifo0ITs & FDCAN_IT_RX_FIFO0_MESSAGE_LOST) {
+        stats[index].rx_fifo_lost_count++;
+    }
+    bsp_can_callback_sol(index, FDCAN_RX_FIFO0);
 }
 
 void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *device, uint32_t itflags) {
@@ -169,6 +195,7 @@ bsp_can_stats_t bsp_can_stats(bsp_can_e device) {
     const bsp_can_stats_t copy = {
         .tx_error_count = stats[device].tx_error_count,
         .rx_error_count = stats[device].rx_error_count,
+        .rx_fifo_lost_count = stats[device].rx_fifo_lost_count,
         .bus_off_count = stats[device].bus_off_count,
         .last_status = stats[device].last_status,
     };

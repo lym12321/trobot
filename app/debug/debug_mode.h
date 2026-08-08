@@ -1,8 +1,9 @@
 #pragma once
 
+#include <cstdint>
+
 namespace debug_mode {
 
-bool init();
-[[noreturn]] void run(bool ready);
+[[noreturn]] void run(std::uint32_t hw_failed);
 
 }

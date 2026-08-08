@@ -18,19 +18,11 @@
 
 extern void example_task(void *args);
 
-[[noreturn]] static void run_debug_mode(uint32_t hw_failed) {
-    const bool ready =
-        (hw_failed & (BSP_HW_FLASH | BSP_HW_USB)) == 0 &&
-        logger::init_flash(logger::NONE) && debug_mode::init();
-    bsp_led_set(ready ? 0 : 50, 0, ready ? 50 : 0);
-    debug_mode::run(ready);
-}
-
 extern "C" [[noreturn]] void app_entrance(void *args) {
-    const bool debug_mode = bsp_debug_mode_requested();
-    uint32_t hw_failed = debug_mode ? bsp_debug_hw_init() : bsp_hw_init();
+    const bool debug_requested = bsp_debug_mode_requested();
+    uint32_t hw_failed = debug_requested ? bsp_debug_hw_init() : bsp_hw_init();
 
-    if (debug_mode) run_debug_mode(hw_failed);
+    if (debug_requested) debug_mode::run(hw_failed);
 
     bsp_led_set(hw_failed == 0 ? 0 : 50, hw_failed == 0 ? 50 : 0, 0);
     bsp_buzzer_flash(4500, 0.2f, 100);

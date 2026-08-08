@@ -37,6 +37,20 @@ bsp_status_t bsp_can_init(bsp_can_e device);
 bsp_status_t bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callback_t func);
 
 /**
+ * 注册标准 CAN 掩码接收回调
+ * @param device can 外设枚举类
+ * @param id 过滤器 ID (0 <= id <= 0x7ff)
+ * @param mask 过滤器掩码 (0 <= mask <= 0x7ff)，0 表示接收全部标准帧
+ * @param func 回调函数
+ */
+bsp_status_t bsp_can_set_mask_callback(
+    bsp_can_e device,
+    uint32_t id,
+    uint32_t mask,
+    bsp_can_callback_t func
+);
+
+/**
  * 发送 can 包
  * @param device can 外设枚举类
  * @param id 要发送的 can id (0 <= id <= 0x7ff)
@@ -48,6 +62,7 @@ bsp_status_t bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, ui
 typedef struct {
     uint32_t tx_error_count;
     uint32_t rx_error_count;
+    uint32_t rx_fifo_lost_count;
     uint32_t bus_off_count;
     bsp_status_t last_status;
 } bsp_can_stats_t;
