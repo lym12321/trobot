@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 
-#include "bsp/usb.h"
 #include "utils/logger.h"
 
 namespace debug_mode::internal {
@@ -37,25 +36,26 @@ status_e info(response_t &response) {
     const status_e status = status_from_flash(logger::flash::get_info(value));
     if (status != status_e::OK) return status;
 
-    return response.write_u32(1) &&
-        response.write_u32(
-            (value.storage_ready ? 1U : 0U) | (value.export_active ? 2U : 0U)
-        ) &&
-        response.write_u32(value.total_size) &&
-        response.write_u32(value.used_size) &&
-        response.write_u32(value.snapshot_size) &&
-        response.write_u32(value.boot_id) &&
-        response.write_u32(value.next_sequence) &&
-        response.write_u32(value.queued_records)
-        ? status_e::OK : status_e::IO_ERROR;
+    response.write_u32(1);
+    response.write_u32(
+        (value.storage_ready ? 1U : 0U) | (value.export_active ? 2U : 0U)
+    );
+    response.write_u32(value.total_size);
+    response.write_u32(value.used_size);
+    response.write_u32(value.snapshot_size);
+    response.write_u32(value.boot_id);
+    response.write_u32(value.next_sequence);
+    response.write_u32(value.queued_records);
+    return status_e::OK;
 }
 
 status_e begin_export(response_t &response) {
     logger::flash::export_t snapshot {};
     const status_e status = status_from_flash(logger::flash::begin_export(snapshot));
     if (status != status_e::OK) return status;
-    return response.write_u32(snapshot.session) && response.write_u32(snapshot.size)
-        ? status_e::OK : status_e::IO_ERROR;
+    response.write_u32(snapshot.session);
+    response.write_u32(snapshot.size);
+    return status_e::OK;
 }
 
 status_e read_export(const request_t &request, response_t &response) {
@@ -64,22 +64,22 @@ status_e read_export(const request_t &request, response_t &response) {
     const std::uint32_t session = read_u32(request.payload);
     const std::uint32_t offset = read_u32(request.payload + 4);
     const std::uint32_t requested_size = read_u32(request.payload + 8);
-    constexpr std::size_t max_read_size =
-        BSP_USB_WINUSB_RESPONSE_SIZE - frame_header_size - 8U - 4U;
+    // Keep the full-speed transfer below the buffer size so it ends on a short packet.
+    const std::size_t max_read_size = response.remaining() - 8U - 4U;
     if (requested_size == 0 || requested_size > max_read_size ||
         requested_size % 4U != 0U || offset % 4U != 0U) {
         return status_e::INVALID_ARGUMENT;
     }
 
-    if (!response.write_u32(session) || !response.write_u32(offset)) {
-        return status_e::IO_ERROR;
-    }
+    response.write_u32(session);
+    response.write_u32(offset);
     std::size_t read_size = 0;
     const status_e status = status_from_flash(logger::flash::read_export(
         session, offset, response.current(), requested_size, read_size
     ));
     if (status != status_e::OK) return status;
-    return response.advance(read_size) ? status_e::OK : status_e::IO_ERROR;
+    response.advance(read_size);
+    return status_e::OK;
 }
 
 }

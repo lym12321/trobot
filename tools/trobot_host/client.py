@@ -40,10 +40,10 @@ class LogClient:
         if len(begin) != 8:
             raise RuntimeError("BEGIN_EXPORT response has an invalid size")
         session, snapshot_size = struct.unpack("<II", begin)
-        output = bytearray()
-        if progress is not None:
-            progress(0, snapshot_size)
         try:
+            output = bytearray()
+            if progress is not None:
+                progress(0, snapshot_size)
             offset = 0
             while offset < snapshot_size:
                 requested = min(READ_CHUNK_SIZE, snapshot_size - offset)
@@ -66,7 +66,17 @@ class LogClient:
                 offset += len(chunk)
                 if progress is not None:
                     progress(offset, snapshot_size)
-        finally:
+        except BaseException as error:
+            try:
+                self._transport.request(
+                    Service.LOG,
+                    LogCommand.END_EXPORT,
+                    struct.pack("<I", session),
+                )
+            except Exception as cleanup_error:
+                error.add_note(f"END_EXPORT cleanup failed: {cleanup_error}")
+            raise
+        else:
             self._transport.request(
                 Service.LOG,
                 LogCommand.END_EXPORT,

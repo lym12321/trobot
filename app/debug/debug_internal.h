@@ -42,13 +42,13 @@ public:
     response_t(std::uint8_t *data, std::size_t capacity)
         : data_(data), capacity_(capacity) {}
 
-    bool write_u8(std::uint8_t value);
-    bool write_u16(std::uint16_t value);
-    bool write_u32(std::uint32_t value);
-    bool write_float(float value);
-    bool write(const void *data, std::size_t size);
-    bool set_u32(std::size_t offset, std::uint32_t value);
-    bool advance(std::size_t size);
+    void write_u8(std::uint8_t value);
+    void write_u16(std::uint16_t value);
+    void write_u32(std::uint32_t value);
+    void write_float(float value);
+    void write(const void *data, std::size_t size);
+    void set_u32(std::size_t offset, std::uint32_t value);
+    void advance(std::size_t size);
 
     [[nodiscard]] std::uint8_t *current() const { return data_ + size_; }
     [[nodiscard]] std::size_t remaining() const { return capacity_ - size_; }

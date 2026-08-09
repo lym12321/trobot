@@ -117,15 +117,14 @@ status_e process_debug(const request_t &request, response_t &response) {
 
     switch (static_cast<debug_command_e>(request.command)) {
         case debug_command_e::CONNECT:
-            if (!response.write_u32(protocol_version) ||
-                !response.write_u32(hardware_failures) ||
-                !response.write_u32(service_mask)) {
-                return status_e::IO_ERROR;
-            }
+            response.write_u32(protocol_version);
+            response.write_u32(hardware_failures);
+            response.write_u32(service_mask);
             host_connected = true;
             return status_e::OK;
         case debug_command_e::DISCONNECT:
             internal::can_stop();
+            host_connected = false;
             return status_e::OK;
         default:
             return status_e::UNKNOWN_COMMAND;
@@ -176,30 +175,27 @@ void process_request(const request_packet_t &packet) {
     }
 
     last_host_activity = xTaskGetTickCount();
-    status_e status;
-    switch (request.service) {
-        case internal::DEBUG_SERVICE:
-            status = process_debug(request, response);
-            break;
-        case internal::LOG_SERVICE:
-            status = internal::process_log(request, response);
-            break;
-        case internal::CAN_SERVICE:
-            status = internal::process_can(request, response);
-            break;
-        case internal::IMU_SERVICE:
-            status = internal::process_imu(request, response);
-            break;
-        default:
-            status = status_e::UNKNOWN_SERVICE;
-            break;
+    status_e status = status_e::NO_SESSION;
+    if (request.service == internal::DEBUG_SERVICE || host_connected) {
+        switch (request.service) {
+            case internal::DEBUG_SERVICE:
+                status = process_debug(request, response);
+                break;
+            case internal::LOG_SERVICE:
+                status = internal::process_log(request, response);
+                break;
+            case internal::CAN_SERVICE:
+                status = internal::process_can(request, response);
+                break;
+            case internal::IMU_SERVICE:
+                status = internal::process_imu(request, response);
+                break;
+            default:
+                status = status_e::UNKNOWN_SERVICE;
+                break;
+        }
     }
     send_frame(request, status, response);
-    if (request.service == internal::DEBUG_SERVICE &&
-        request.command == static_cast<std::uint8_t>(debug_command_e::DISCONNECT) &&
-        status == status_e::OK) {
-        host_connected = false;
-    }
 }
 
 void update_led() {
@@ -249,46 +245,40 @@ std::uint32_t read_u32(const std::uint8_t *data) {
            static_cast<std::uint32_t>(data[3]) << 24U;
 }
 
-bool response_t::write_u8(std::uint8_t value) {
-    return write(&value, sizeof value);
+void response_t::write_u8(std::uint8_t value) {
+    write(&value, sizeof value);
 }
 
-bool response_t::write_u16(std::uint16_t value) {
+void response_t::write_u16(std::uint16_t value) {
     std::uint8_t data[2];
     store_u16(data, value);
-    return write(data, sizeof data);
+    write(data, sizeof data);
 }
 
-bool response_t::write_u32(std::uint32_t value) {
+void response_t::write_u32(std::uint32_t value) {
     std::uint8_t data[4];
     store_u32(data, value);
-    return write(data, sizeof data);
+    write(data, sizeof data);
 }
 
-bool response_t::write_float(float value) {
+void response_t::write_float(float value) {
     static_assert(sizeof value == sizeof(std::uint32_t));
     std::uint32_t bits;
     std::memcpy(&bits, &value, sizeof bits);
-    return write_u32(bits);
+    write_u32(bits);
 }
 
-bool response_t::write(const void *data, std::size_t size) {
-    if (size > remaining()) return false;
+void response_t::write(const void *data, std::size_t size) {
     std::memcpy(current(), data, size);
     size_ += size;
-    return true;
 }
 
-bool response_t::set_u32(std::size_t offset, std::uint32_t value) {
-    if (offset > size_ || size_ - offset < sizeof value) return false;
+void response_t::set_u32(std::size_t offset, std::uint32_t value) {
     store_u32(data_ + offset, value);
-    return true;
 }
 
-bool response_t::advance(std::size_t size) {
-    if (size > remaining()) return false;
+void response_t::advance(std::size_t size) {
     size_ += size;
-    return true;
 }
 
 }

@@ -583,8 +583,6 @@ class TRobotTui(App[None]):
         self._imu_client = None
         if transport is not None:
             try:
-                if self._can_running:
-                    CanClient(transport).stop()
                 transport.close()
             except Exception:
                 pass
@@ -736,38 +734,43 @@ class TRobotTui(App[None]):
 
     @work(thread=True, exclusive=True, group="connection")
     def connect_device(self, device: DeviceInfo) -> None:
-        transport: Transport | None = None
         try:
             transport = self._connector(device)
-            client = LogClient(transport)
-            ping = getattr(transport, "ping", None)
-            info = None if callable(ping) else client.info()
-            if callable(ping):
-                ping()
         except Exception as error:
-            if transport is not None:
-                try:
-                    transport.close()
-                except Exception:
-                    pass
             self.call_from_thread(self._connect_failed, error)
             return
 
+        client = LogClient(transport)
         can_client = CanClient(transport)
         imu_client = ImuClient(transport)
-        if info is None:
-            try:
-                info = client.info()
-            except Exception:
-                pass
+        probe_error: Exception | None = None
+        try:
+            info = client.info()
+        except Exception as error:
+            info = None
+            probe_error = error
         try:
             can_status = can_client.status()
-        except Exception:
+        except Exception as error:
             can_status = None
+            if probe_error is None:
+                probe_error = error
         try:
             imu_status = imu_client.status()
-        except Exception:
+        except Exception as error:
             imu_status = None
+            if probe_error is None:
+                probe_error = error
+        if info is None and can_status is None and imu_status is None:
+            try:
+                transport.close()
+            except Exception:
+                pass
+            self.call_from_thread(
+                self._connect_failed,
+                probe_error or RuntimeError("No debug service responded"),
+            )
+            return
         self.call_from_thread(
             self._set_connected,
             device,
@@ -872,24 +875,15 @@ class TRobotTui(App[None]):
 
     def _poll_connection(self) -> None:
         transport = self._transport
-        client = self._client
-        if (
-            transport is None
-            or client is None
-            or self._connection_check_transport is not None
-        ):
+        if transport is None or self._connection_check_transport is not None:
             return
         self._connection_check_transport = transport
-        self._check_connection(transport, client)
+        self._check_connection(transport)
 
     @work(thread=True, group="connection-monitor")
-    def _check_connection(self, transport: Transport, client: LogClient) -> None:
+    def _check_connection(self, transport: Transport) -> None:
         try:
-            ping = getattr(transport, "ping", None)
-            if callable(ping):
-                ping()
-            else:
-                client.info()
+            transport.ping()
         except Exception as error:
             try:
                 transport.close()

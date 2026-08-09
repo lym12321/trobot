@@ -19,11 +19,11 @@ enum class command_e : std::uint8_t {
 
 bool hardware_ready;
 
-bool write_vector(response_t &response, const float *values, std::size_t count) {
+template <typename T>
+void write_vector(response_t &response, const T &values, std::size_t count) {
     for (std::size_t i = 0; i < count; ++i) {
-        if (!response.write_float(values[i])) return false;
+        response.write_float(values[i]);
     }
-    return true;
 }
 
 status_e write_status(response_t &response) {
@@ -34,41 +34,35 @@ status_e write_status(response_t &response) {
         (ready ? 2U : 0U) |
         (calibration.valid ? 4U : 0U) |
         (calibration.persisted ? 8U : 0U);
-    return response.write_u32(1) && response.write_u32(flags) &&
-        response.write_u32(static_cast<std::uint32_t>(calibration.state)) &&
-        response.write_u32(static_cast<std::uint32_t>(calibration.error)) &&
-        response.write_u32(calibration.progress_ms) &&
-        response.write_u32(calibration.duration_ms) &&
-        write_vector(response, calibration.gyro_corr.data(), 3)
-        ? status_e::OK : status_e::IO_ERROR;
+    response.write_u32(1);
+    response.write_u32(flags);
+    response.write_u32(static_cast<std::uint32_t>(calibration.state));
+    response.write_u32(static_cast<std::uint32_t>(calibration.error));
+    response.write_u32(calibration.progress_ms);
+    response.write_u32(calibration.duration_ms);
+    write_vector(response, calibration.gyro_corr.data(), 3);
+    return status_e::OK;
 }
 
 status_e write_state(response_t &response) {
     if (!hardware_ready || !ins::ready()) return status_e::NOT_READY;
     const auto state = ins::state();
-    if (!response.write_u32(1) || !response.write_u32(bsp_time_get_ms()) ||
-        !write_vector(response, state.raw.accel, 3) ||
-        !write_vector(response, state.raw.gyro, 3) ||
-        !response.write_float(state.raw.temp)) {
-        return status_e::IO_ERROR;
-    }
-    for (int axis = 0; axis < 3; ++axis) {
-        if (!response.write_float(state.accel[axis])) return status_e::IO_ERROR;
-    }
-    for (int axis = 0; axis < 3; ++axis) {
-        if (!response.write_float(state.gyro[axis])) return status_e::IO_ERROR;
-    }
-    for (int index = 0; index < 4; ++index) {
-        if (!response.write_float(state.q[index])) return status_e::IO_ERROR;
-    }
-    return response.write_float(state.roll) &&
-        response.write_float(state.pitch) &&
-        response.write_float(state.yaw) &&
-        response.write_float(state.yaw_total_angle) &&
-        response.write_u32(
-            (state.converged ? 1U : 0U) | (state.stationary ? 2U : 0U)
-        )
-        ? status_e::OK : status_e::IO_ERROR;
+    response.write_u32(1);
+    response.write_u32(bsp_time_get_ms());
+    write_vector(response, state.raw.accel, 3);
+    write_vector(response, state.raw.gyro, 3);
+    response.write_float(state.raw.temp);
+    write_vector(response, state.accel, 3);
+    write_vector(response, state.gyro, 3);
+    write_vector(response, state.q, 4);
+    response.write_float(state.roll);
+    response.write_float(state.pitch);
+    response.write_float(state.yaw);
+    response.write_float(state.yaw_total_angle);
+    response.write_u32(
+        (state.converged ? 1U : 0U) | (state.stationary ? 2U : 0U)
+    );
+    return status_e::OK;
 }
 
 }

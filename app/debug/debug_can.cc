@@ -118,33 +118,25 @@ status_e write_status(response_t &response) {
     if (sample_elapsed != 0) status_sampled_elapsed_ms = elapsed;
     bsp_sys_exit_critical(critical);
 
-    if (!response.write_u32(1) || !response.write_u32(bitrate) ||
-        !response.write_u32(available_mask) || !response.write_u32(active) ||
-        !response.write_u32(tracked_id_limit) ||
-        !response.write_u32(sample_elapsed)) {
-        return status_e::IO_ERROR;
-    }
+    response.write_u32(1);
+    response.write_u32(bitrate);
+    response.write_u32(available_mask);
+    response.write_u32(active);
+    response.write_u32(tracked_id_limit);
+    response.write_u32(sample_elapsed);
 
     for (std::size_t i = 0; i < BSP_CAN_DEVICE_COUNT; ++i) {
         const auto stats = bsp_can_stats(static_cast<bsp_can_e>(i));
-        if (!response.write_u32(captured_copy[i]) ||
-            !response.write_u32(missed_copy[i]) ||
-            !response.write_u32(rate_millihz(recent_copy[i], sample_elapsed)) ||
-            !response.write_u32(
-                stats.rx_fifo_lost_count - stats_base[i].rx_fifo_lost_count
-            ) ||
-            !response.write_u32(
-                stats.tx_error_count - stats_base[i].tx_error_count
-            ) ||
-            !response.write_u32(
-                stats.rx_error_count - stats_base[i].rx_error_count
-            ) ||
-            !response.write_u32(
-                stats.bus_off_count - stats_base[i].bus_off_count
-            ) ||
-            !response.write_u32(static_cast<std::uint32_t>(stats.last_status))) {
-            return status_e::IO_ERROR;
-        }
+        response.write_u32(captured_copy[i]);
+        response.write_u32(missed_copy[i]);
+        response.write_u32(rate_millihz(recent_copy[i], sample_elapsed));
+        response.write_u32(
+            stats.rx_fifo_lost_count - stats_base[i].rx_fifo_lost_count
+        );
+        response.write_u32(stats.tx_error_count - stats_base[i].tx_error_count);
+        response.write_u32(stats.rx_error_count - stats_base[i].rx_error_count);
+        response.write_u32(stats.bus_off_count - stats_base[i].bus_off_count);
+        response.write_u32(static_cast<std::uint32_t>(stats.last_status));
     }
     return status_e::OK;
 }
@@ -180,6 +172,9 @@ status_e start(const request_t &request) {
 }
 
 status_e read(response_t &response) {
+    std::array<
+        std::array<std::uint32_t, tracked_id_limit>, BSP_CAN_DEVICE_COUNT
+    > recent_count {};
     const unsigned long critical = bsp_sys_enter_critical();
     const std::uint32_t active = active_mask;
     const std::uint32_t elapsed = active != 0
@@ -189,48 +184,48 @@ status_e read(response_t &response) {
     std::array<std::uint32_t, BSP_CAN_DEVICE_COUNT> missed_copy;
     for (std::size_t i = 0; i < BSP_CAN_DEVICE_COUNT; ++i) {
         missed_copy[i] = missed[i];
+        for (std::size_t j = 0; j < tracked_id_limit; ++j) {
+            recent_count[i][j] = samples[i][j].recent_count;
+            if (sample_elapsed != 0) samples[i][j].recent_count = 0;
+        }
     }
     bsp_sys_exit_critical(critical);
 
-    if (!response.write_u32(1)) return status_e::IO_ERROR;
+    response.write_u32(1);
     const std::size_t count_offset = response.size();
-    if (!response.write_u32(0) || !response.write_u32(sample_elapsed)) {
-        return status_e::IO_ERROR;
-    }
+    response.write_u32(0);
+    response.write_u32(sample_elapsed);
     for (std::size_t i = 0; i < BSP_CAN_DEVICE_COUNT; ++i) {
-        if (!response.write_u32(missed_copy[i])) return status_e::IO_ERROR;
+        response.write_u32(missed_copy[i]);
     }
 
     std::uint32_t count = 0;
     for (std::size_t device = 0; device < BSP_CAN_DEVICE_COUNT; ++device) {
-        for (auto &source : samples[device]) {
+        for (std::size_t index = 0; index < tracked_id_limit; ++index) {
+            auto &source = samples[device][index];
             sample_t sample;
             const unsigned long sample_critical = bsp_sys_enter_critical();
             const bool occupied = source.occupied;
-            if (occupied) {
-                sample = source;
-                if (sample_elapsed != 0) source.recent_count = 0;
-            }
+            if (occupied) sample = source;
             bsp_sys_exit_critical(sample_critical);
             if (!occupied) continue;
 
             const std::uint32_t frequency = rate_millihz(
-                sample.recent_count, sample_elapsed
+                recent_count[device][index], sample_elapsed
             );
-            if (!response.write_u8(static_cast<std::uint8_t>(device)) ||
-                !response.write_u8(sample.len) || !response.write_u16(0) ||
-                !response.write_u32(sample.id) ||
-                !response.write_u32(sample.last_timestamp_ms) ||
-                !response.write_u32(sample.count) ||
-                !response.write_u32(frequency) ||
-                !response.write(sample.data.data(), sample.len)) {
-                return status_e::IO_ERROR;
-            }
+            response.write_u8(static_cast<std::uint8_t>(device));
+            response.write_u8(sample.len);
+            response.write_u16(0);
+            response.write_u32(sample.id);
+            response.write_u32(sample.last_timestamp_ms);
+            response.write_u32(sample.count);
+            response.write_u32(frequency);
+            response.write(sample.data.data(), sample.len);
             count++;
         }
     }
-    return response.set_u32(count_offset, count)
-        ? status_e::OK : status_e::IO_ERROR;
+    response.set_u32(count_offset, count);
+    return status_e::OK;
 }
 
 }
