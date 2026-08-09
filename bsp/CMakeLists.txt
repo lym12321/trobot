@@ -10,9 +10,7 @@ endif()
 
 set(CHERRYUSB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/cherryusb")
 
-if(TROBOT_ENABLE_SYSTEMVIEW)
-    add_subdirectory(third_party/segger)
-endif()
+add_subdirectory(third_party/segger)
 
 file(GLOB_RECURSE SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
@@ -43,11 +41,10 @@ target_include_directories(bsp
     PRIVATE ${CHERRYUSB_DIR}/port/dwc2
 )
 
-target_link_libraries(bsp PUBLIC stm32cubemx m)
-
-if(TROBOT_ENABLE_SYSTEMVIEW)
-    target_link_libraries(bsp PRIVATE bsp::segger bsp::segger_config)
-endif()
+target_link_libraries(bsp
+    PUBLIC stm32cubemx m
+    PRIVATE bsp::segger bsp::segger_config
+)
 
 set_target_properties(bsp PROPERTIES
         C_STANDARD 17
