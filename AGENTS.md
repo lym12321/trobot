@@ -56,6 +56,7 @@ History uses `feat:`, `fix:`, `chore:`, and `doc:` prefixes, sometimes with scop
 
 - Development work MUST be performed on the local `dev` branch, which tracks `origin/dev`. Do not create commits directly on `main`.
 - Before creating any commit, verify that the current branch is `dev`. Preserve unrelated user changes and do not discard or stash them without explicit approval.
+- Before any `git push`, inspect the local commits that are not yet on the remote and decide whether they should be consolidated. If it is unclear whether consolidation is appropriate, obtain explicit human confirmation before pushing.
 - Changes may be merged from `dev` into `main` only after validation and human review have completed.
 - A request to commit or merge into `main` requires a second explicit confirmation immediately before the operation. The initial request to make or merge the change does not count as that confirmation.
 - Never push `main` or perform a `dev`-to-`main` merge without that second confirmation.
@@ -63,6 +64,12 @@ History uses `feat:`, `fix:`, `chore:`, and `doc:` prefixes, sometimes with scop
 ### Modification Discipline
 
 Do not rewrite or restructure code speculatively. Every change must follow the existing intent, naming, formatting, and architectural patterns of the file it touches. Before making a change that alters more than a few localized lines — or that changes interfaces, deletes user-authored comments, renames symbols, or introduces new abstractions — ask the user whether the change is desired. When in doubt, ask.
+
+### Local Tooling and Test Discipline
+
+- Before using a local Python environment or any other language-specific environment, obtain explicit human confirmation on how that environment should be used.
+- Before creating a directory under the project to hold test code, obtain explicit human confirmation.
+- Before writing tests, determine whether each test and its supporting code are necessary. Remove unnecessary test code and keep the remaining implementation minimal.
 
 ### Submodule Synchronization
 
