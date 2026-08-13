@@ -50,14 +50,20 @@ bsp_status_t bsp_can_set_mask_callback(
     bsp_can_callback_t func
 ) {
     if (device < 0 || device >= BSP_CAN_DEVICE_COUNT || id > 0x7ff ||
-        mask > 0x7ff || func == NULL || cnt[device] >= BSP_CAN_FILTER_LIMIT_STD) {
+        mask > 0x7ff || func == NULL) {
         return BSP_STATUS_ERROR;
     }
 
+    const unsigned long state = bsp_sys_enter_critical();
     for (uint8_t i = 0; i < cnt[device]; i++) {
         if (filter_id[device][i] == id && filter_mask[device][i] == mask) {
-            return BSP_STATUS_ERROR;
+            bsp_sys_exit_critical(state);
+            return BSP_STATUS_BUSY;
         }
+    }
+    if (cnt[device] >= BSP_CAN_FILTER_LIMIT_STD) {
+        bsp_sys_exit_critical(state);
+        return BSP_STATUS_ERROR;
     }
 
     const uint8_t index = cnt[device];
@@ -73,13 +79,14 @@ bsp_status_t bsp_can_set_mask_callback(
 
     const bsp_status_t status = bsp_status_from_hal(HAL_FDCAN_ConfigFilter(handle[device], &filter));
     stats[device].last_status = status;
-    if (status != BSP_STATUS_OK) return status;
-
-    filter_id[device][index] = id;
-    filter_mask[device][index] = mask;
-    callback[device][index] = func;
-    cnt[device]++;
-    return BSP_STATUS_OK;
+    if (status == BSP_STATUS_OK) {
+        filter_id[device][index] = id;
+        filter_mask[device][index] = mask;
+        callback[device][index] = func;
+        cnt[device]++;
+    }
+    bsp_sys_exit_critical(state);
+    return status;
 }
 
 static uint32_t len2code(uint8_t l) {
