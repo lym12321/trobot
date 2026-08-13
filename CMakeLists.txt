@@ -65,12 +65,6 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
-# Add sources to executable
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user sources here
-    $<TARGET_OBJECTS:app>
-)
-
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
@@ -88,9 +82,7 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 target_link_libraries(${CMAKE_PROJECT_NAME}
     # Add user defined libraries
     stm32cubemx
-    components
-    bsp
-    m
+    app
 )
 
 

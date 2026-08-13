@@ -22,7 +22,7 @@ function(recursion_include path)
     endforeach()
 endfunction()
 
-file(GLOB_RECURSE SOURCES ${sources} "${CMAKE_CURRENT_SOURCE_DIR}/*.*")
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.*")
 recursion_include(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(app OBJECT ${SOURCES})
