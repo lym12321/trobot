@@ -74,7 +74,7 @@ CubeMX command availability and user-code preservation depend on version/setting
 
 ## Development Board Documentation
 
-Project documents are stored in `docs/`. The development board reference is the [DM-MC-Board02 User Manual V1.1](docs/DM-MC-Board02_User_Manual_V1.1.pdf), supplied by Damiao Technology. The PDF retains its original contents; its English filename identifies the board and manual version.
+Project documents are stored in `docs/`. The development board reference is the [DM-MC-Board02 User Manual V1.1](DM-MC-Board02_User_Manual_V1.1.pdf), supplied by Damiao Technology. The PDF retains its original contents; its English filename identifies the board and manual version.
 
 - **Read the board manual before changing hardware-related behavior.** For pin assignments, connector definitions, peripheral mappings, onboard devices, power supplies, voltage levels, communication wiring, jumpers, or other board-specific behavior, inspect the relevant manual sections, tables, and diagrams first. Then cross-check the current `.ioc`, BSP implementation, and the user's actual wiring before deciding on a change.
 - **Do not invent hardware facts.** Do not infer pin numbers, peripheral instances, supply requirements, communication parameters, or board capabilities from memory, another board model, or an unverified example. If the manual does not specify a required detail, cannot be read clearly, or does not establish the answer, state the uncertainty and ask the user for the missing evidence rather than writing an assumption into code.
