@@ -44,7 +44,7 @@ Keep ISRs and HAL callbacks short. Defer work through callbacks, queues, notific
 
 Treat `trobot.ioc` as the source for peripheral, clock, DMA, NVIC, and FreeRTOS configuration. Keep custom logic out of generated files unless inside user sections. BSP drivers should expose narrow C wrappers and hide HAL handles, buffers, filters, and callbacks in `bsp/src/`.
 
-**CubeMX modification boundary**: Changes that require adjusting CubeMX-generated content — including `FreeRTOSConfig.h`, interrupt priorities in NVIC, peripheral pin assignments, clock tree, DMA streams, linker script memory regions, or any `.ioc`-managed setting — MUST NOT be made directly by the agent. Instead, describe the required CubeMX change and ask the user to apply it manually through the CubeMX IDE. Direct edits to `trobot.ioc`, generated `Core/` files outside `USER CODE` sections, `Drivers/`, `Middlewares/`, `USB_DEVICE/`, or `startup_stm32h723xx.s` are PROHIBITED.
+**CubeMX modification boundary**: Before changing any `.ioc`-managed setting (pins, clocks, DMA, NVIC, FreeRTOS, or related generated configuration), explain the exact change and regeneration risks and obtain explicit user approval. After approval, the user may configure and generate through the CubeMX GUI, or may explicitly authorize the agent to use documented CubeMX CLI/script operations supported by the installed version. If the CLI cannot make the required configuration change, ask the user to perform it in the GUI. Never hand-edit `trobot.ioc`, generated peripheral initialization, `Drivers/`, `Middlewares/`, root `USB_DEVICE/`, startup code, or generated CMake as a substitute for CubeMX. Changes inside existing `USER CODE` sections require approval for the specific hook and must remain regeneration-safe. Preserve local changes, including ignored generated files and the tracked linker script, before regeneration. Follow the detailed procedure in [`docs/agent-development.md`](docs/agent-development.md).
 
 No standalone automated test harness is present. For firmware changes, run a clean CMake build and document board verification: flash result, OpenOCD verify status, terminal output, sensor data, CAN/UART traffic, or motor response.
 
@@ -101,3 +101,7 @@ After every modification, the agent MUST review the changes for correctness befo
 - Runtime `BSP_ASSERT` misuse (assert only for init-time errors, never runtime)
 
 Non-Codex agents MUST additionally run a compilation test (`cmake --build --preset Debug`) and verify zero errors before considering the modification complete. Codex agents MUST follow the permission-dependent build policy above: build under Full Access, otherwise perform static review and explicitly report that compilation was skipped.
+
+## Application Development and Board Reference
+
+Agents developing robot applications with TRobot MUST also read and follow [`docs/agent-development.md`](docs/agent-development.md). The guide defines `app/`/`bsp/`/`components/` ownership, submodule boundaries, CubeMX regeneration procedures, and board documentation checks. This repository targets the DM-MC-Board02 development board; use the included [`DM-MC-Board02 User Manual V1.1`](docs/DM-MC-Board02_User_Manual_V1.1.pdf) for hardware-specific work and cross-check its revision and the current `.ioc`/BSP configuration. Do not assume undocumented pinouts or electrical parameters.
