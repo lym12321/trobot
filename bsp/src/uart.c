@@ -167,9 +167,9 @@ bsp_status_t bsp_uart_set_baudrate(bsp_uart_e device, uint32_t baudrate) {
         bsp_time_delay(1);
     }
 
-    HAL_StatusTypeDef hal = HAL_UART_DeInit(handle[device]);
+    // 直接重配，保留 CubeMX 初始化的 RS485 DE 极性和时序。
     handle[device]->Init.BaudRate = baudrate;
-    if (hal == HAL_OK) hal = HAL_UART_Init(handle[device]);
+    const HAL_StatusTypeDef hal = HAL_UART_Init(handle[device]);
     const bsp_status_t status = bsp_status_from_hal(hal);
     stats[device].last_status = status;
     return status;
@@ -205,12 +205,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *h) {
             } else {
                 ds_rq_pop(&rq[i], (uint8_t *) &len, sizeof(len));
                 ds_rq_pop(&rq[i], tx_buffer[i], len);
-                if (len == 0 || len > BSP_UART_BUFFER_SIZE) {
-                    busy[i] = 0;
-                    ds_rq_init(&rq[i], rq_buffer[i], BSP_UART_QUEUE_SIZE);
-                } else {
-                    send_nxt = 1;
-                }
+                send_nxt = 1;
             }
             bsp_sys_exit_critical(_state);
             if (send_nxt) {

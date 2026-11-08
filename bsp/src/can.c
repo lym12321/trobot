@@ -161,9 +161,7 @@ void bsp_can_callback_sol(bsp_can_e device, uint32_t fifo) {
 
         const uint8_t index = (uint8_t) header.FilterIndex;
         memcpy(rx_buffer[device][index], buf, len);
-        if (callback[device][index] != NULL) {
-            callback[device][index](device, header.Identifier, rx_buffer[device][index], len);
-        }
+        callback[device][index](device, header.Identifier, rx_buffer[device][index], len);
     }
 }
 
