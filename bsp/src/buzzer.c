@@ -15,6 +15,7 @@ bsp_status_t bsp_buzzer_init() {
 bsp_status_t bsp_buzzer_alarm(float freq, float blank) {
     bsp_status_t status = bsp_tim_config(&htim12, freq);
     if (status == BSP_STATUS_OK) status = bsp_tim_set_duty(&htim12, TIM_CHANNEL_2, blank);
+    if (status == BSP_STATUS_OK) status = bsp_tim_pwm_enable(&htim12, TIM_CHANNEL_2);
     return status;
 }
 

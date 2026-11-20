@@ -50,6 +50,20 @@ git clone https://github.com/lym12321/trobot.git --recursive
 > - 该项目仍在开发中，尚未完成，部分功能可能无法使用。
 > - 此版本相对于前期项目有较大改动，请确保在完全理解项目代码逻辑后使用，**不要**直接复制旧代码的参数和逻辑。
 
+### RTT 文本调试
+
+需要通过调试探针输出短文本时，在任务上下文显式调用 BSP RTT 接口：
+
+```c
+#include "bsp/rtt.h"
+
+(void) bsp_rtt_printf("imu ready: %u\n", ready);
+```
+
+RTT 使用非阻塞的 Up channel 0，缓冲区不足时返回 `BSP_STATUS_BUSY`。接口使用固定格式化缓冲，不创建任务或队列，调用方负责保持单写者。`bsp_rtt_printf()` 的输出上限为 255 字节，生产启动流程不会自动启用 RTT 输出。
+
+启用 `TROBOT_ENABLE_SYSTEMVIEW=ON` 时，SystemView 使用 Up channel 1，避免与文本调试通道冲突。
+
 ### 可选组件
 
 > [!TIP]

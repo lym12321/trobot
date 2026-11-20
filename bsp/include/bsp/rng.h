@@ -14,7 +14,8 @@ extern "C" {
  * 生成一个 [l, r] 区间内的随机数
  * @param l 区间左端点
  * @param r 区间右端点
- * @return [l, r] 区间内的随机数
+ * @param result 输出的随机数
+ * @return BSP_STATUS_OK 或硬件/参数错误状态
  */
 bsp_status_t bsp_rng_random(int l, int r, int *result);
 

@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 
+/* Task-context, single-writer debug output through SEGGER RTT channel 0. */
 bsp_status_t bsp_rtt_write(const uint8_t *data, uint32_t len);
 bsp_status_t bsp_rtt_printf(const char *fmt, ...);
 

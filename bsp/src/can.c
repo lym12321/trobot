@@ -191,11 +191,12 @@ void HAL_FDCAN_ErrorStatusCallback(FDCAN_HandleTypeDef *device, uint32_t itflags
         else return;
         stats[index].bus_off_count++;
         stats[index].last_status = BSP_STATUS_OFFLINE;
+        CLEAR_BIT(device->Instance->CCCR, FDCAN_CCCR_INIT);
     }
 }
 
 bsp_can_stats_t bsp_can_stats(bsp_can_e device) {
-    BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT);
+    if (device < 0 || device >= BSP_CAN_DEVICE_COUNT) return (bsp_can_stats_t) { 0 };
     const unsigned long state = bsp_sys_enter_critical();
     const bsp_can_stats_t copy = {
         .tx_error_count = stats[device].tx_error_count,

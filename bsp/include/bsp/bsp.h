@@ -30,16 +30,6 @@ extern "C" {
 uint32_t bsp_hw_init();
 
 /**
- * 调试模式所需硬件初始化
- */
-uint32_t bsp_debug_hw_init();
-
-/**
- * 启动阶段检测调试模式按键
- */
-bool bsp_debug_mode_requested(void);
-
-/**
  * 喂狗
  */
 void bsp_iwdg_refresh();
