@@ -17,6 +17,11 @@ extern "C" {
 uint32_t bsp_time_get_ms();
 
 /**
+ * ISR-safe system timestamp in milliseconds.
+ */
+uint32_t bsp_time_get_ms_isr();
+
+/**
  * 获取当前系统时间戳 (us)
  * @return 当前系统时间戳 (us)
  */

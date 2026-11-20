@@ -13,6 +13,10 @@ uint32_t bsp_time_get_ms() {
     return xTaskGetTickCount();
 }
 
+uint32_t bsp_time_get_ms_isr() {
+    return (uint32_t) ((uint64_t) xTaskGetTickCountFromISR() * portTICK_PERIOD_MS);
+}
+
 uint64_t bsp_time_get_us() {
     uint32_t ms_old = xTaskGetTickCount();
     uint32_t tick_val_old = SysTick->VAL;
