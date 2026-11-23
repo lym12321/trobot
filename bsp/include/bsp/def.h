@@ -26,6 +26,7 @@ typedef enum {
     BSP_STATUS_BUSY,
     BSP_STATUS_TIMEOUT,
     BSP_STATUS_OFFLINE,
+    BSP_STATUS_NOT_FOUND,
 } bsp_status_t;
 
 static inline bsp_status_t bsp_status_from_hal(HAL_StatusTypeDef status) {

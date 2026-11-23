@@ -78,11 +78,12 @@ EfErrCode ef_port_init(ef_env const **default_env, size_t *default_env_size) {
  *
  * @return result
  */
-EfErrCode ef_port_read(uint32_t addr, uint32_t *buf, size_t size) {
+EfErrCode ef_port_read(uint32_t addr, void *buf, size_t size) {
     if (buf == NULL || !flash_range_valid(addr, size)) return EF_READ_ERR;
 
-    return OSPI_W25Qxx_ReadBuffer((uint8_t *) buf, addr, size) == OSPI_W25Qxx_OK ?
-        EF_NO_ERR : EF_READ_ERR;
+    if (OSPI_W25Qxx_ReadBuffer(buf, addr, size) != OSPI_W25Qxx_OK) return EF_READ_ERR;
+    if (bsp_flash_initializing) bsp_iwdg_refresh();
+    return EF_NO_ERR;
 }
 
 /**

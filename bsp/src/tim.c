@@ -14,7 +14,8 @@
 #define RCC_APB2_CLOCK_FREQ_MHZ 240
 
 bsp_status_t bsp_tim_set(TIM_HandleTypeDef *device, uint32_t period, uint32_t prescaler) {
-    if (device == NULL) return BSP_STATUS_ERROR;
+    if (device == NULL || prescaler > UINT16_MAX ||
+        (!IS_TIM_32B_COUNTER_INSTANCE(device->Instance) && period > UINT16_MAX)) return BSP_STATUS_ERROR;
     HAL_StatusTypeDef hal = HAL_TIM_Base_DeInit(device);
     device->Init.Period    = period;
     device->Init.Prescaler = prescaler;
@@ -31,14 +32,14 @@ bsp_status_t bsp_tim_config(TIM_HandleTypeDef *device, float p) {
     } else {
         t *= RCC_APB1_CLOCK_FREQ_MHZ;
     }
-    if (device->Instance == TIM2 || device->Instance == TIM5 || device->Instance == TIM23 || device->Instance == TIM24) {
+    if (IS_TIM_32B_COUNTER_INSTANCE(device->Instance)) {
         period_limit = (1ll << 32);
     } else {
         period_limit = (1ll << 16);
     }
     double k = ceil(t / period_limit);
-    if (t < 1.0 || k < 1.0 || k > 4294967296.0 || t / k < 1.0) return BSP_STATUS_ERROR;
-    return bsp_tim_set(device, (uint32_t)(t / k) - 1, (uint32_t)k - 1);
+    if (t < 1.0 || k > 65536.0) return BSP_STATUS_ERROR;
+    return bsp_tim_set(device, (uint32_t)(t / k - 1.0), (uint32_t)k - 1U);
 }
 
 // 0 <= blank <= 1

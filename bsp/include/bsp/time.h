@@ -28,7 +28,7 @@ uint32_t bsp_time_get_ms_isr();
 uint64_t bsp_time_get_us();
 
 /**
- * 系统级阻塞 delay (ms)
+ * 系统级阻塞 delay (ms)，内部按 FreeRTOS tick 转换，短延时向上取整
  * @param ms 延时时间 (ms)
  */
 void bsp_time_delay(uint32_t ms);

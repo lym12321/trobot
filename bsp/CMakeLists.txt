@@ -37,8 +37,14 @@ target_include_directories(bsp
     PRIVATE ${CHERRYUSB_DIR}/common
     PRIVATE ${CHERRYUSB_DIR}/core
     PRIVATE ${CHERRYUSB_DIR}/class/cdc
+    PRIVATE ${CHERRYUSB_DIR}/class/msc
     PRIVATE ${CHERRYUSB_DIR}/class/hub
     PRIVATE ${CHERRYUSB_DIR}/port/dwc2
+)
+
+target_compile_definitions(bsp PUBLIC
+    USB_CDC_COUNT=${TROBOT_USB_CDC_COUNT}
+    USB_WINUSB_ENABLE=$<BOOL:${TROBOT_USB_WINUSB}>
 )
 
 target_link_libraries(bsp

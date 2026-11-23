@@ -20,6 +20,7 @@ typedef enum {
 extern "C" {
 #endif
 
+/* Runs in the CAN ISR. Consume or copy data before returning. */
 typedef void (*bsp_can_callback_t)(bsp_can_e device, uint32_t id, const uint8_t *data, size_t len);
 
 /**
@@ -37,7 +38,7 @@ bsp_status_t bsp_can_init(bsp_can_e device);
 bsp_status_t bsp_can_set_callback(bsp_can_e device, uint32_t id, bsp_can_callback_t func);
 
 /**
- * 注册标准 CAN 掩码接收回调
+ * 注册标准 CAN 掩码接收回调；与同一端口已注册的过滤器相交时返回 BUSY。
  * @param device can 外设枚举类
  * @param id 过滤器 ID (0 <= id <= 0x7ff)
  * @param mask 过滤器掩码 (0 <= mask <= 0x7ff)，0 表示接收全部标准帧
@@ -54,7 +55,7 @@ bsp_status_t bsp_can_set_mask_callback(
  * 发送 can 包
  * @param device can 外设枚举类
  * @param id 要发送的 can id (0 <= id <= 0x7ff)
- * @param data 要发送的数据指针，必须保证在发送完成前有效
+ * @param data 要发送的数据，返回前已复制到硬件发送 FIFO
  * @param len 要发送的数据长度，若 > 8 则使用 canfd 发送
  */
 bsp_status_t bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, uint8_t len);

@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "bsp/usb.h"
 
 typedef enum {
     BSP_HW_LED    = 1U << 0,
@@ -16,7 +17,6 @@ typedef enum {
     BSP_HW_ADC    = 1U << 5,
     BSP_HW_FLASH  = 1U << 6,
     BSP_HW_BUZZER = 1U << 7,
-    BSP_HW_LCD    = 1U << 8,
     BSP_HW_USB    = 1U << 9,
 } bsp_hw_e;
 
@@ -27,7 +27,9 @@ extern "C" {
 /**
  * bsp 硬件初始化
  */
-uint32_t bsp_hw_init();
+uint32_t bsp_hw_init(void);
+uint32_t bsp_hw_init_with_usb(const bsp_usb_config_t *cfg);
+bool bsp_user_key_pressed(void);
 
 /**
  * 喂狗

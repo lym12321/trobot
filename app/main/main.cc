@@ -10,6 +10,7 @@
 #include "bsp/buzzer.h"
 #include "ins/ins.h"
 #include "music/music.h"
+#include "utils/log_disk.h"
 #include "utils/logger.h"
 #include "utils/os.h"
 #include "utils/terminal.h"
@@ -22,6 +23,19 @@ constexpr uint32_t imu_retry_delay_ms = 500;
 }
 
 extern "C" [[noreturn]] void app_entrance(void *args) {
+    if (bsp_user_key_pressed()) {
+        os::task::sleep(10);
+        if (bsp_user_key_pressed()) {
+            const bsp_usb_config_t usb{.cdc_count = 1, .winusb = false, .disk = logger::prepare_log_disk()};
+            if (bsp_usb_init_with(&usb) != BSP_STATUS_OK && bsp_led_init() == BSP_STATUS_OK)
+                bsp_led_set(50, 0, 0);
+            for (;;) {
+                bsp_usb_poll();
+                bsp_iwdg_refresh();
+                os::task::sleep(1);
+            }
+        }
+    }
     uint32_t hw_failed = bsp_hw_init();
 
     if ((hw_failed & BSP_HW_IMU) != 0) {
@@ -40,39 +54,36 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
             for (;;) os::task::sleep(100);
         }
     }
+    logger::init_flash(logger::WARNING);
+    // logger::init(E_UART_1, logger::INFO);
+    bsp_dwt_init();
+    ins::init();
 
-    const bool startup_ok = hw_failed == 0;
-    bsp_led_set(startup_ok ? 0 : 50, startup_ok ? 50 : 0, 0);
+    bsp_led_set(hw_failed ? 50 : 0, hw_failed ? 0 : 50, 0);
     bsp_buzzer_flash(4500, 0.2f, 100);
     bsp_time_delay(100);
 
     // Init Basic Components
 
-    music::init();
-    logger::init_flash(logger::WARNING);
-    // logger::init(E_UART_1, logger::INFO);
+    // music::init();
     // terminal::init(E_UART_1);
-
-    ins::init();
+    // logger::register_terminal_commands();
+    // ins::register_terminal_commands();
+    // music::register_terminal_commands();
     while (!ins::ready()) {
         os::task::sleep(5);
         bsp_iwdg_refresh();
     }
 
-    constexpr music::tone_t ready_tone[] {
-        { 4500, 75 },
-        { 0, 50 },
-        { 4500, 75 },
-    };
-    music::play_blocking(ready_tone);
+    bsp_buzzer_flash(4500, 0.2f, 75);
+    bsp_time_delay(50);
+    bsp_buzzer_flash(4500, 0.2f, 75);
 
     // Init Application Tasks
-    BSP_ASSERT(os::task::static_create(
-        example_task, nullptr, "example_task", 512, os::task::Priority::HIGH
-    ));
+    // BSP_ASSERT(os::task::static_create(example_task, nullptr, "example_task", 512, os::task::Priority::HIGH));
 
     for (;;) {
-        if (startup_ok) {
+        if (hw_failed == 0) {
             bsp_led_set_hsv(static_cast<float>(bsp_time_get_ms() % 3000) / 3000.0f, 1.0f, 0.3f);
         }
         bsp_iwdg_refresh();

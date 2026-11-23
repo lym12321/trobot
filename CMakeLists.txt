@@ -28,6 +28,12 @@ project(${CMAKE_PROJECT_NAME})
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 option(TROBOT_ENABLE_SYSTEMVIEW "Enable SEGGER SystemView tracing" OFF)
+set(TROBOT_USB_CDC_COUNT 1 CACHE STRING "Number of USB CDC ports (0..3)")
+set_property(CACHE TROBOT_USB_CDC_COUNT PROPERTY STRINGS 0 1 2 3)
+if(NOT TROBOT_USB_CDC_COUNT MATCHES "^[0-3]$")
+    message(FATAL_ERROR "TROBOT_USB_CDC_COUNT must be between 0 and 3")
+endif()
+option(TROBOT_USB_WINUSB "Enable the USB WinUSB transport" ON)
 
 # Enable CMake support for ASM and C languages
 enable_language(C CXX ASM)
@@ -38,9 +44,8 @@ add_executable(${CMAKE_PROJECT_NAME})
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
 
-# 开启 newlib-nano 的 printf/scanf 支持,但是会占用更多内存
+# INS 启动诊断使用 newlib-nano 的浮点输出。
 target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
-    -Wl,-u,_scanf_float
     -Wl,-u,_printf_float
 )
 

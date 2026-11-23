@@ -96,7 +96,7 @@ Avoid runtime heap allocation. If dynamic allocation is required, confine it to 
 
 Buffers and referenced messages need explicit capacity, ownership, lifetime, and overflow behavior. Avoid hidden copies; pass small values directly and larger immutable data by reference only when its lifetime is guaranteed across the complete call or deferred-delivery interval.
 
-Check returned status values. Intentionally ignored results must use an explicit `(void)` cast only when failure is known to be harmless. Keep formatted I/O, floating-point formatting, logging, and diagnostic aggregation out of ISRs and high-frequency control paths unless their worst-case cost is measured and accepted.
+Check returned status values unless failure is known to be harmless. Keep formatted I/O, floating-point formatting, logging, and diagnostic aggregation out of ISRs and high-frequency control paths unless their worst-case cost is measured and accepted.
 
 ## Verification by Change Type
 

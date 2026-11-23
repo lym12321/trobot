@@ -2,6 +2,8 @@
 
 extern OSPI_HandleTypeDef hospi2;
 
+#define W25Q_IO_TIMEOUT_MS 20U
+
 /*************************************************************************************************
 *	函 数 名: OSPI_W25Qxx_Init
 *	入口参数: 无
@@ -38,7 +40,7 @@ int8_t OSPI_W25Qxx_Init(void)
 *	说    明: 每一次通信都应该调用此函数，等待通信结束，避免错误的操作	
 ******************************************************************************************FANKE*****/
 
-int8_t OSPI_W25Qxx_AutoPollingMemReady(void)
+static int8_t OSPI_W25Qxx_AutoPollingMemReady(uint32_t timeout_ms)
 {
     OSPI_RegularCmdTypeDef  sCommand;		// OSPI传输配置
     OSPI_AutoPollingTypeDef sConfig;			// 轮询比较相关配置参数
@@ -62,7 +64,7 @@ int8_t OSPI_W25Qxx_AutoPollingMemReady(void)
     
     sCommand.Instruction        = W25Qxx_CMD_ReadStatus_REG1;         // 读状态信息寄存器
     
-    if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING; // 轮询等待无响应
     }
@@ -77,7 +79,7 @@ int8_t OSPI_W25Qxx_AutoPollingMemReady(void)
     sConfig.Mask          = W25Qxx_Status_REG1_BUSY;                // 对在轮询模式下接收的状态字节进行屏蔽，只比较需要用到的位
     
     // 发送轮询等待命令
-    if (HAL_OSPI_AutoPolling(&hospi2, &sConfig,HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_AutoPolling(&hospi2, &sConfig, timeout_ms) != HAL_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING; // 轮询等待无响应
     }
@@ -117,9 +119,9 @@ uint32_t OSPI_W25Qxx_ReadID(void)
     sCommand.Instruction        = W25Qxx_CMD_JedecID;                 // 执行读器件ID命令
     
     
-    HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE);	// 发送指令
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK) return 0;	// 发送指令
     
-    HAL_OSPI_Receive (&hospi2, OSPI_ReceiveBuff, HAL_OSPI_TIMEOUT_DEFAULT_VALUE);	// 接收数据
+    if (HAL_OSPI_Receive(&hospi2, OSPI_ReceiveBuff, W25Q_IO_TIMEOUT_MS) != HAL_OK) return 0;	// 接收数据
     
     W25Qxx_ID = (OSPI_ReceiveBuff[0] << 16) | (OSPI_ReceiveBuff[1] << 8 ) | OSPI_ReceiveBuff[2];	// 将得到的数据组合成ID
     
@@ -163,7 +165,7 @@ int8_t OSPI_W25Qxx_MemoryMappedMode(void)
    sCommand.SIOOMode                = HAL_OSPI_SIOO_INST_EVERY_CMD;           // 每次传输数据都发送指令   
 
     // 写配置
-    if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_TRANSMIT;		// 传输数据错误
     }   
@@ -211,7 +213,7 @@ int8_t OSPI_W25Qxx_WriteEnable(void)
    sCommand.Instruction             = W25Qxx_CMD_WriteEnable;                 // 写使能命令
 
    // 发送写使能命令
-   if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+   if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
    {
       return W25Qxx_ERROR_WriteEnable;	
    }
@@ -231,7 +233,7 @@ int8_t OSPI_W25Qxx_WriteEnable(void)
 
    sCommand.Instruction        = W25Qxx_CMD_ReadStatus_REG1;         // 查询状态寄存器命令
 
-   if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+   if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
    {
       return W25Qxx_ERROR_WriteEnable;	
    }
@@ -245,7 +247,7 @@ int8_t OSPI_W25Qxx_WriteEnable(void)
     sConfig.AutomaticStop = HAL_OSPI_AUTOMATIC_STOP_ENABLE;	// 自动停止模式
     sConfig.Mask          = W25Qxx_Status_REG1_WEL; 			// 对在轮询模式下接收的状态字节进行屏蔽，只比较需要用到的位
     
-    if (HAL_OSPI_AutoPolling(&hospi2, &sConfig,HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_AutoPolling(&hospi2, &sConfig,W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING; // 轮询等待无响应
     }
@@ -303,12 +305,12 @@ int8_t OSPI_W25Qxx_SectorErase(uint32_t SectorAddress)
         return W25Qxx_ERROR_WriteEnable;		// 写使能失败
     }
     // 发送擦除指令
-    if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING; // 轮询等待无响应
     }   
     // 使用自动轮询标志位，等待擦除的结束 
-    if (OSPI_W25Qxx_AutoPollingMemReady() != OSPI_W25Qxx_OK)
+    if (OSPI_W25Qxx_AutoPollingMemReady(420U) != OSPI_W25Qxx_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING;		// 轮询等待无响应
     }
@@ -361,12 +363,12 @@ int8_t OSPI_W25Qxx_BlockErase_32K (uint32_t SectorAddress)
         return W25Qxx_ERROR_WriteEnable;		// 写使能失败
     }
     // 发送擦除指令
-    if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING; // 轮询等待无响应
     }   
     // 使用自动轮询标志位，等待擦除的结束 
-    if (OSPI_W25Qxx_AutoPollingMemReady() != OSPI_W25Qxx_OK)
+    if (OSPI_W25Qxx_AutoPollingMemReady(1650U) != OSPI_W25Qxx_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING;		// 轮询等待无响应
     }
@@ -419,12 +421,12 @@ int8_t OSPI_W25Qxx_BlockErase_64K (uint32_t SectorAddress)
         return W25Qxx_ERROR_WriteEnable;		// 写使能失败
     }
     // 发送擦除指令
-    if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING; // 轮询等待无响应
     }   
     // 使用自动轮询标志位，等待擦除的结束 
-    if (OSPI_W25Qxx_AutoPollingMemReady() != OSPI_W25Qxx_OK)
+    if (OSPI_W25Qxx_AutoPollingMemReady(1650U) != OSPI_W25Qxx_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING;		// 轮询等待无响应
     }
@@ -475,7 +477,7 @@ int8_t OSPI_W25Qxx_ChipErase (void)
         return W25Qxx_ERROR_WriteEnable;		// 写使能失败
     }
     // 发送擦除指令
-    if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING; // 轮询等待无响应
     }   
@@ -485,7 +487,7 @@ int8_t OSPI_W25Qxx_ChipErase (void)
     sCommand.NbData         = 1;                             // 数据长度1
     sCommand.Instruction    = W25Qxx_CMD_ReadStatus_REG1;    // 状态寄存器命令
     
-    if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
     return W25Qxx_ERROR_AUTOPOLLING;	
     }
@@ -570,17 +572,17 @@ int8_t OSPI_W25Qxx_WritePage(uint8_t* pBuffer, uint32_t WriteAddr, uint16_t NumB
         return W25Qxx_ERROR_WriteEnable;	// 写使能失败
     }
     // 写命令  
-    if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_TRANSMIT;		// 传输数据错误
     }   
     // 开始传输数据
-    if (HAL_OSPI_Transmit(&hospi2, pBuffer, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+    if (HAL_OSPI_Transmit(&hospi2, pBuffer, W25Q_IO_TIMEOUT_MS) != HAL_OK)
     {
         return W25Qxx_ERROR_TRANSMIT;		// 传输数据错误
     }
     // 使用自动轮询标志位，等待写入的结束 
-    if (OSPI_W25Qxx_AutoPollingMemReady() != OSPI_W25Qxx_OK)
+    if (OSPI_W25Qxx_AutoPollingMemReady(W25Q_IO_TIMEOUT_MS) != OSPI_W25Qxx_OK)
     {
         return W25Qxx_ERROR_AUTOPOLLING;		// 轮询等待无响应
     }
@@ -710,17 +712,17 @@ int8_t OSPI_W25Qxx_ReadBuffer(uint8_t* pBuffer, uint32_t ReadAddr, uint32_t NumB
    sCommand.SIOOMode                = HAL_OSPI_SIOO_INST_EVERY_CMD;           // 每次传输数据都发送指令   
 
  	// 写命令  
-	if (HAL_OSPI_Command(&hospi2, &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+	if (HAL_OSPI_Command(&hospi2, &sCommand, W25Q_IO_TIMEOUT_MS) != HAL_OK)
 	{
 		return W25Qxx_ERROR_TRANSMIT;		// 传输数据错误
 	}   
 	//	接收数据
-	if (HAL_OSPI_Receive(&hospi2, pBuffer, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK)
+	if (HAL_OSPI_Receive(&hospi2, pBuffer, W25Q_IO_TIMEOUT_MS) != HAL_OK)
 	{
 		return W25Qxx_ERROR_TRANSMIT;		// 传输数据错误
 	}
 	// 使用自动轮询标志位，等待接收的结束  
-	if (OSPI_W25Qxx_AutoPollingMemReady() != OSPI_W25Qxx_OK)
+	if (OSPI_W25Qxx_AutoPollingMemReady(W25Q_IO_TIMEOUT_MS) != OSPI_W25Qxx_OK)
 	{
 		return W25Qxx_ERROR_AUTOPOLLING;		// 轮询等待无响应
 	}

@@ -1,28 +1,15 @@
-//
-// Created by fish on 2025/9/19.
-//
-
 #pragma once
 
-#include "bsp/def.h"
+#include "bsp/serial.h"
 
 #define BSP_UART_DEVICE_COUNT 6
-#define BSP_UART_BUFFER_SIZE 512
-
-typedef enum {
-    E_UART_1,
-    E_UART_2,
-    E_UART_3,
-    E_UART_5,
-    E_UART_7,
-    E_UART_10
-} bsp_uart_e;
+#define BSP_UART_BUFFER_SIZE BSP_SERIAL_BUFFER_SIZE
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef void (*bsp_uart_callback_t) (bsp_uart_e device, const uint8_t *data, size_t len);
+typedef bsp_serial_callback_t bsp_uart_callback_t;
 
 /**
  * 串口阻塞发送

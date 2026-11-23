@@ -21,8 +21,6 @@ static uint32_t filter_mask[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 static bsp_can_callback_t callback[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD];
 static volatile bsp_can_stats_t stats[BSP_CAN_DEVICE_COUNT];
 
-static uint8_t rx_buffer[BSP_CAN_DEVICE_COUNT][BSP_CAN_FILTER_LIMIT_STD][BSP_CAN_BUFFER_SIZE];
-
 bsp_status_t bsp_can_init(bsp_can_e device) {
     BSP_ASSERT(0 <= device && device < BSP_CAN_DEVICE_COUNT);
     HAL_StatusTypeDef hal = HAL_FDCAN_ActivateNotification(
@@ -56,7 +54,7 @@ bsp_status_t bsp_can_set_mask_callback(
 
     const unsigned long state = bsp_sys_enter_critical();
     for (uint8_t i = 0; i < cnt[device]; i++) {
-        if (filter_id[device][i] == id && filter_mask[device][i] == mask) {
+        if (((filter_id[device][i] ^ id) & filter_mask[device][i] & mask) == 0) {
             bsp_sys_exit_critical(state);
             return BSP_STATUS_BUSY;
         }
@@ -119,8 +117,17 @@ bsp_status_t bsp_can_send(bsp_can_e device, uint32_t id, const uint8_t *data, ui
         .MessageMarker = 0x01
     };
 
+    uint8_t padded[8];
+    if ((len & 3U) != 0U) {
+        /* HAL reads the last message RAM word as four bytes, even for short DLCs. */
+        memset(padded, 0, sizeof(padded));
+        memcpy(padded, data, len);
+        data = padded;
+    }
     const unsigned long state = bsp_sys_enter_critical();
-    const bsp_status_t status = bsp_status_from_hal(HAL_FDCAN_AddMessageToTxFifoQ(handle[device], &header, data));
+    const bsp_status_t status = bsp_status_from_hal(
+        HAL_FDCAN_AddMessageToTxFifoQ(handle[device], &header, data)
+    );
     stats[device].last_status = status;
     if (status != BSP_STATUS_OK) {
         stats[device].tx_error_count++;
@@ -143,7 +150,7 @@ static uint8_t code2len(uint32_t l) {
 
 void bsp_can_callback_sol(bsp_can_e device, uint32_t fifo) {
     FDCAN_RxHeaderTypeDef header;
-    static uint8_t buf[BSP_CAN_BUFFER_SIZE] = { 0 };
+    uint8_t buf[BSP_CAN_BUFFER_SIZE];
     while (HAL_FDCAN_GetRxFifoFillLevel(handle[device], fifo)) {
         if (HAL_FDCAN_GetRxMessage(handle[device], fifo, &header, buf) != HAL_OK) {
             stats[device].rx_error_count++;
@@ -160,8 +167,7 @@ void bsp_can_callback_sol(bsp_can_e device, uint32_t fifo) {
         }
 
         const uint8_t index = (uint8_t) header.FilterIndex;
-        memcpy(rx_buffer[device][index], buf, len);
-        callback[device][index](device, header.Identifier, rx_buffer[device][index], len);
+        callback[device][index](device, header.Identifier, buf, len);
     }
 }
 

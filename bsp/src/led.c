@@ -14,7 +14,9 @@ static uint16_t buf[24+48];
 
 bsp_status_t bsp_led_init() {
     for (uint8_t i = 0; i < 24+48; i++) buf[i] = 0;
-    return bsp_status_from_hal(HAL_TIMEx_PWMN_Start_DMA(&htim8, TIM_CHANNEL_1, (uint32_t *) buf, 24+48));
+    HAL_StatusTypeDef hal = HAL_TIMEx_PWMN_Start_DMA(&htim8, TIM_CHANNEL_1, (uint32_t *) buf, 24+48);
+    if (hal == HAL_OK) __HAL_DMA_DISABLE_IT(htim8.hdma[TIM_DMA_ID_CC1], DMA_IT_HT | DMA_IT_TC);
+    return bsp_status_from_hal(hal);
 }
 
 void bsp_led_set(uint8_t r, uint8_t g, uint8_t b) {

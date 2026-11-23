@@ -18,3 +18,4 @@ docs/research/
 
 components/*
 !components/CMakeLists.txt
+!components/display/
