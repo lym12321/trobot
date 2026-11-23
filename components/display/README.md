@@ -1,6 +1,6 @@
 # ST7789 显示
 
-在 DM-MC-Board02 的一个应用任务中调用 `show_ready()`，即可在黑底上显示白色的 READY。先由 `app_entrance()` 完成 `bsp_hw_init()`。使用板级适配头的目标需要链接 `components::display` 和 `bsp`，项目的 `app` 已满足这一条件。
+在 DM-MC-Board02 的一个应用任务中调用 `show_ready()`，即可在黑底上显示白色的 READY。先由 `app_entrance()` 调用 `bsp_hw_init(&usb)` 完成板级初始化。使用板级适配头的目标需要链接 `components::display` 和 `bsp`，项目的 `app` 已满足这一条件。
 
 ```cpp
 #include "display/dm_mc_board02.h"
@@ -40,4 +40,4 @@ display::status_e show_ready() {
 | `draw_ascii*` | `screen.text(...)`，单字符可传 `std::string_view{&ch, 1}` |
 | `set_key_callback`、`process_keys` | 包含 `bsp/key.h`，调用 `bsp_key_set_callback`、`bsp_key_poll` |
 
-五向键可单独使用。确认 `bsp_hw_init()` 返回值未置 `BSP_HW_ADC` 后，先注册按键回调，再由一个任务每隔至多 10 ms 调用 `bsp_key_poll()`。回调同步运行在此任务，注册的上下文须在轮询期间保持有效。按键消抖 10 ms，长按 800 ms。注册了双击的键会等待第二次按下，等待窗口为 500 ms。只注册单击时，松键即触发。
+五向键可单独使用。确认 `bsp_hw_init(&usb)` 返回值未置 `BSP_HW_ADC` 后，先注册按键回调，再由一个任务每隔至多 10 ms 调用 `bsp_key_poll()`。回调同步运行在此任务，注册的上下文须在轮询期间保持有效。按键消抖 10 ms，长按 800 ms。注册了双击的键会等待第二次按下，等待窗口为 500 ms。只注册单击时，松键即触发。

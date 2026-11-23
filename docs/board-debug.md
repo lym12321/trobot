@@ -50,16 +50,18 @@ CubeMX 重新生成后，如果覆盖了项目的链接脚本，检查差异并�
 
 ## 选择 USB 接口
 
-普通启动调用 `bsp_hw_init()`，默认提供一个 CDC 串口和 WinUSB。通过 CMake 的 `TROBOT_USB_CDC_COUNT`（0 到 3）和 `TROBOT_USB_WINUSB`（`ON` 或 `OFF`）选择构建配置。应用也可以在启动时从已编入的功能中选择组合。以下写法替换原有的 `bsp_hw_init()` 调用，只启用一个 CDC 串口。
+普通启动向 `bsp_hw_init(&usb)` 传入构建配置指定的 CDC 端口数和 WinUSB 开关。CMake 选项 `TROBOT_USB_CDC_COUNT`（0 到 3）和 `TROBOT_USB_WINUSB`（`ON` 或 `OFF`）默认为一个 CDC 端口并启用 WinUSB。下面的调用只启用一个 CDC 端口。
 
 ```cpp
 const bsp_usb_config_t usb{.cdc_count = 1, .winusb = false, .disk = nullptr};
-uint32_t hw_failed = bsp_hw_init_with_usb(&usb);
+uint32_t hw_failed = bsp_hw_init(&usb);
 ```
 
-USB 配置在复位前固定。维护启动始终提供 CDC 0 和只读日志盘，应用可在枚举前注册 CDC 接收回调。接入自定义磁盘时，磁盘描述和上下文需在连接和重连期间保持有效，由一个任务周期调用 `bsp_usb_poll()`，每次最多读取一个 512 字节扇区。
+C 和 C++ 调用者都必须传入配置对象的地址。传入全零配置可关闭 USB。首次初始化后，切换组合需要复位。
 
-默认组合的 WinUSB 端点是 OUT `0x05` 和 IN `0x84`。`bsp_usb_winusb_send()` 成功后会借用 4 字节对齐的发送缓冲区。等 `bsp_usb_winusb_tx_busy()` 返回 `false` 后再修改或释放它。主机单独发出 `SET_CONFIGURATION(0)` 后，缓冲区可能仍被占用，直到下次有效配置或总线复位。
+维护启动直接调用 `bsp_usb_init(&usb)`，只启用 CDC 0 和只读日志盘。即使普通启动的 CDC 端口数设为 0，固件也为维护模式预留一个端口。接入自定义磁盘时，磁盘描述和上下文需在连接和重连期间保持有效，由一个任务周期调用 `bsp_usb_poll()`，每次最多读取一个 512 字节扇区。
+
+仅启用一个 CDC 端口和 WinUSB 时，WinUSB 端点是 OUT `0x05` 和 IN `0x84`。`bsp_usb_winusb_send()` 成功后会借用 4 字节对齐的发送缓冲区。等 `bsp_usb_winusb_tx_busy()` 返回 `false` 后再修改或释放它。主机单独发出 `SET_CONFIGURATION(0)` 后，缓冲区可能仍被占用，直到下次有效配置或总线复位。
 
 ## 在串口或 USB CDC 上查看告警
 

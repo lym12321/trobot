@@ -37,10 +37,9 @@ typedef struct {
     const bsp_usb_disk_t *disk;
 } bsp_usb_config_t;
 
-bsp_status_t bsp_usb_init(void);
-/* Select the combination once at startup. Zero functions leave USB disconnected.
+/* A zeroed config leaves USB disconnected.
  * CDC capacity is max(1, USB_CDC_COUNT). WinUSB requires USB_WINUSB_ENABLE. */
-bsp_status_t bsp_usb_init_with(const bsp_usb_config_t *config);
+bsp_status_t bsp_usb_init(const bsp_usb_config_t *config);
 /* A single task must poll while a disk is attached. Each call serves at most one sector. */
 void bsp_usb_poll(void);
 bool bsp_usb_is_configured(void);

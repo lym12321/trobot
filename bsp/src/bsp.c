@@ -45,17 +45,13 @@ bool bsp_user_key_pressed(void) {
     return HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET;
 }
 
-uint32_t bsp_hw_init(void) {
-    return bsp_hw_init_with_usb(NULL);
-}
-
-uint32_t bsp_hw_init_with_usb(const bsp_usb_config_t *cfg) {
+uint32_t bsp_hw_init(const bsp_usb_config_t *usb) {
     bsp_segger_trace_init();
 
     uint32_t failed = 0;
     if (bsp_led_init() != BSP_STATUS_OK) failed |= BSP_HW_LED;
     if (bsp_flash_init() != BSP_STATUS_OK) failed |= BSP_HW_FLASH;
-    if ((cfg ? bsp_usb_init_with(cfg) : bsp_usb_init()) != BSP_STATUS_OK) failed |= BSP_HW_USB;
+    if (bsp_usb_init(usb) != BSP_STATUS_OK) failed |= BSP_HW_USB;
     if (bsp_can_init(E_CAN_1) != BSP_STATUS_OK) failed |= BSP_HW_CAN_1;
     if (bsp_can_init(E_CAN_2) != BSP_STATUS_OK) failed |= BSP_HW_CAN_2;
     if (bsp_can_init(E_CAN_3) != BSP_STATUS_OK) failed |= BSP_HW_CAN_3;

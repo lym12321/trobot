@@ -25,10 +25,9 @@ extern "C" {
 #endif
 
 /**
- * bsp 硬件初始化
+ * 初始化板级硬件，usb 指向本次启动的 USB 配置。
  */
-uint32_t bsp_hw_init(void);
-uint32_t bsp_hw_init_with_usb(const bsp_usb_config_t *cfg);
+uint32_t bsp_hw_init(const bsp_usb_config_t *usb);
 bool bsp_user_key_pressed(void);
 
 /**

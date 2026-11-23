@@ -66,7 +66,7 @@ For every shared object, identify the producer and consumer contexts. `volatile`
 
 Before calling a FreeRTOS `...FromISR` API, confirm that the configured NVIC preemption priority is numerically greater than or equal to `configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY`. A numerically lower priority value is above the syscall ceiling on Cortex-M and MUST NOT call FreeRTOS, including the critical-section helpers in `bsp/sys.h`. `configMAX_SYSCALL_INTERRUPT_PRIORITY` is the encoded BASEPRI value, not a logical NVIC priority to compare directly. If the priority must change, ask the user to update it through CubeMX rather than editing generated configuration.
 
-Initialize board hardware through `bsp_hw_init()` before starting application tasks. Create tasks from `app_entrance()` using `os::task::static_create()` or FreeRTOS APIs, and keep watchdog refresh paths explicit. Use `os::task::sleep()` or `vTaskDelayUntil()` for periodic work; reserve busy microsecond waits for short hardware timing.
+Initialize board hardware through `bsp_hw_init(&usb)` before starting application tasks. Pass an explicit `bsp_usb_config_t`, zero-initialized to disable USB. Create tasks from `app_entrance()` using `os::task::static_create()` or FreeRTOS APIs, and keep watchdog refresh paths explicit. Use `os::task::sleep()` or `vTaskDelayUntil()` for periodic work; reserve busy microsecond waits for short hardware timing.
 
 Keep ISRs and HAL callbacks short. Prefer updating bounded state and waking a task over performing application work in interrupt context. DMA-visible buffers must be placed in a DMA-accessible RAM domain; review lifetime, alignment, ownership, and cache behavior before changing UART, CAN, SPI, USB, IMU, or flash paths.
 

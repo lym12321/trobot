@@ -27,7 +27,7 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
         os::task::sleep(10);
         if (bsp_user_key_pressed()) {
             const bsp_usb_config_t usb{.cdc_count = 1, .winusb = false, .disk = logger::prepare_log_disk()};
-            if (bsp_usb_init_with(&usb) != BSP_STATUS_OK && bsp_led_init() == BSP_STATUS_OK)
+            if (bsp_usb_init(&usb) != BSP_STATUS_OK && bsp_led_init() == BSP_STATUS_OK)
                 bsp_led_set(50, 0, 0);
             for (;;) {
                 bsp_usb_poll();
@@ -36,7 +36,10 @@ extern "C" [[noreturn]] void app_entrance(void *args) {
             }
         }
     }
-    uint32_t hw_failed = bsp_hw_init();
+    constexpr bsp_usb_config_t usb{
+        .cdc_count = BSP_USB_CDC_COUNT, .winusb = USB_WINUSB_ENABLE != 0, .disk = nullptr
+    };
+    uint32_t hw_failed = bsp_hw_init(&usb);
 
     if ((hw_failed & BSP_HW_IMU) != 0) {
         for (uint32_t attempt = 0; attempt < imu_retry_limit; ++attempt) {

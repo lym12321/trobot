@@ -443,13 +443,8 @@ static struct usb_descriptor descriptor = {
     .string_descriptor_callback = string_descriptor_callback,
 };
 
-bsp_status_t bsp_usb_init(void) {
-    const bsp_usb_config_t config = { .cdc_count = USB_CDC_COUNT, .winusb = USB_WINUSB_ENABLE };
-    return bsp_usb_init_with(&config);
-}
-
-bsp_status_t bsp_usb_init_with(const bsp_usb_config_t *config) {
-    if (!config || config->cdc_count > CDC_CAPACITY || (config->winusb && !USB_WINUSB_ENABLE) ||
+bsp_status_t bsp_usb_init(const bsp_usb_config_t *config) {
+    if (config == NULL || config->cdc_count > CDC_CAPACITY || (config->winusb && !USB_WINUSB_ENABLE) ||
         (config->disk && (!config->disk->read || !config->disk->block_count))) return BSP_STATUS_ERROR;
     if (initialized) {
         return config->cdc_count == active.cdc_count && config->winusb == active.winusb && config->disk == active.disk
